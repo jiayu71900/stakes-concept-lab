@@ -3,38 +3,25 @@ body:
   - type: markdown
     attributes:
       value: |
-        Try to break the social system, not just the interface. Concrete abuse paths are useful even when the answer is still unknown.
-  - type: input
-    id: rule
+        Found a loophole, unfair edge, or strange behavior? Drop it here. Rough ideas are welcome — you do not need to have the solution.
+  - type: textarea
+    id: scenario
     attributes:
-      label: Which rule are you attacking?
-      placeholder: For example, default cleaning or random discovery.
+      label: What happened?
+      description: Walk us through the situation in your own words.
     validations:
       required: true
   - type: textarea
-    id: actors
+    id: breakable
     attributes:
-      label: Who is involved and what do they want?
-      description: Name the actors, incentives, and any coordination between them.
-    validations:
-      required: true
-  - type: textarea
-    id: path
-    attributes:
-      label: Smallest reproducible abuse path
-      description: Walk through the sequence from normal use to the unwanted outcome.
-    validations:
-      required: true
-  - type: textarea
-    id: signal
-    attributes:
-      label: What signal might reveal it?
+      label: Why does it feel breakable?
+      description: Who benefits, who loses, or what starts feeling unfair?
     validations:
       required: false
   - type: textarea
-    id: response
+    id: next
     attributes:
-      label: What response would preserve the product principle?
-      description: A good response should add resistance without quietly turning a default into a ban.
+      label: What would you try next?
+      description: A rule change, a signal to watch, or simply another question.
     validations:
       required: false

@@ -29,14 +29,3 @@ body:
       label: What did you expect to happen instead?
     validations:
       required: false
-  - type: dropdown
-    id: relationship
-    attributes:
-      label: How are you approaching the project?
-      options:
-        - I would try this as a user
-        - I want to challenge the rules
-        - I may want to shape part of the system
-        - I am simply curious
-    validations:
-      required: true
