@@ -42,3 +42,6 @@ yarn-error.log*
 
 # Local Sites deployment binding
 .openai/hosting.json
+
+# Site-hosted social card carries deployment-specific provenance metadata
+public/og.png
