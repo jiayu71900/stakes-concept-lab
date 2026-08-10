@@ -21,12 +21,15 @@ flowchart TD
 - **Engines** own challenge transitions, discovery eligibility, leaderboard ordering, default liability, and cleansing.
 - **Mock** supplies deterministic people, pacts, stakes, and a repeatable story.
 
-## Backend replacement path
+## Two-repository replacement path
 
-1. Add a repository interface returning domain objects.
-2. Keep engines pure; run them server-side where authority matters.
-3. Replace local demo persistence with an API adapter.
-4. Add event IDs and optimistic concurrency around state transitions.
-5. Add identity, proof, dispute, and logistics boundaries only after their product rules are accepted.
+1. Keep the public Concept Demo deterministic and independently runnable.
+2. Define a public repository or event interface returning domain objects.
+3. Implement authoritative identity, trust, ranking, and operations in the private production repository.
+4. Replace local demo persistence with an adapter to that interface when the production boundary is ready.
+5. Keep public product rules inspectable while keeping private data, thresholds, enforcement, and credentials out of this repository.
 
 No UI route should need a conceptual rewrite during this migration.
+
+See [Open-core boundary](OPEN_CORE_BOUNDARY.md) for the placement rule that
+applies before future work begins.

@@ -1,4 +1,4 @@
-import type { Challenge, DefaultRecord, User } from "@/domain/models";
+import type { Challenge, DefaultRecord, User } from "../domain/models.js";
 
 export function defaultMarksFor(challenge: Challenge) {
   return challenge.leaderboardPlacement?.board === "highest_stakes" ? 10 : 1;

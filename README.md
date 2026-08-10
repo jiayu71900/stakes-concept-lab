@@ -77,6 +77,20 @@ docs/        decisions, invariants, scenario, and open questions
 
 Read [the architecture notes](docs/ARCHITECTURE.md), [domain spec](docs/DOMAIN.md), and [state machine](docs/STATE_MACHINE.md) before changing rules.
 
+## Open product surface, private production core
+
+This repository stays public as the playable product surface: the Concept Demo,
+basic domain language, visible V0 rules, mock engines, documentation, and
+community collaboration.
+
+Real accounts and data, production ranking and abuse controls, verification,
+payments, fulfillment, disputes, and commercial operations belong in a separate
+private production repository. Public conversations may shape those boundaries;
+their operational implementation does not live here.
+
+Read [the open-core boundary](docs/OPEN_CORE_BOUNDARY.md) before proposing work
+that touches identity, trust, ranking, payments, or operations.
+
 ## Run locally
 
 Requires Node.js 22.13 or newer.

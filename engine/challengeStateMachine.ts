@@ -1,4 +1,4 @@
-import type { Challenge, ChallengeState } from "@/domain/models";
+import type { Challenge, ChallengeState } from "../domain/models.js";
 
 export const challengeTransitions: Record<ChallengeState, ChallengeState[]> = {
   DRAFT: ["OPEN"],

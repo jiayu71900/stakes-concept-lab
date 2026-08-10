@@ -1,5 +1,5 @@
-import type { Challenge, LeaderboardType, User } from "@/domain/models";
-import { isLeaderboardEligible } from "./defaultEngine";
+import type { Challenge, LeaderboardType, User } from "../domain/models.js";
+import { isLeaderboardEligible } from "./defaultEngine.js";
 
 const scoreByBoard: Record<LeaderboardType, (challenge: Challenge) => number> = {
   highest_stakes: (challenge) => challenge.stake.estimatedValue,

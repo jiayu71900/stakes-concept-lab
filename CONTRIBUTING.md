@@ -20,6 +20,7 @@ Before changing behavior, read `docs/DOMAIN.md` and `docs/STATE_MACHINE.md`.
 - Use the UI to reveal consequences, not to become a second rule engine.
 - Pair rule changes with focused behavior tests and update the relevant domain note.
 - Discuss production infrastructure before adding authentication, payments, persistence, logistics, or verification services.
+- Use [the open-core boundary](docs/OPEN_CORE_BOUNDARY.md) to keep public contracts separate from private production authority.
 - Preserve the Concept Demo as a playable vertical slice even when exploring a longer-lived architecture.
 
 ## Proposing and building

@@ -1,4 +1,4 @@
-import type { Challenge, DiscoverySession, User } from "@/domain/models";
+import type { Challenge, DiscoverySession, User } from "../domain/models.js";
 
 export interface DiscoveryResult {
   challenge: Challenge | null;
