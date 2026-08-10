@@ -12,7 +12,7 @@ These questions are intentionally outside V0 and should not become accidental ru
 ## Discovery
 
 - How should controlled randomness balance novelty, fairness, and exposure budgets?
-- What makes a pact “interesting” without turning it into rage bait?
+- What makes a bet “interesting” without turning it into rage bait?
 - How should shared links coexist with ordinary no-search discovery?
 
 ## Operations

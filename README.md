@@ -1,92 +1,106 @@
-# STAKES.
+# BET I DO.
 
-> **What would you risk to finally do it?**
+> **Put something real on your word.**
 
-Finish the goal — keep your stuff.  
-Fail — ship it to your challenger.  
-Chicken out — everyone knows.
+Say what you will do. Put up something you care about. Let someone take the
+other side.
 
-**Sounds simple. It gets weird quickly.**
+Finish — keep it.
 
-STAKES. is a working concept for a social commitment network built around physical stakes. This repository is a deliberately small, interactive V0: mock data, real domain rules, no production backend.
+Fail — ship it to your challenger.
 
-**[Play the Concept Demo](https://stakes-concept-lab.jiayu71900.chatgpt.site)** · **[Join the Discussions](https://github.com/jiayu71900/stakes-concept-lab/discussions)**
+Refuse to pay up — keep playing, but carry the mark.
 
-## Try the 60-second story
+**BET I DO.** is a playable public foundation for a social betting game about
+promises people make about themselves. The current repository contains the
+interactive product surface, durable domain language, real rule engines, mock
+scenario data, and the community layer. Production authority can replace the
+mock layer later without rewriting the experience.
 
-The demo follows one complete vertical slice:
+**[Play BET I DO.](https://stakes-concept-lab.jiayu71900.chatgpt.site)** · **[Join the Discussions](https://github.com/jiayu71900/stakes-concept-lab/discussions)**
 
-`Create → Discover → Challenge → Match → Fail → Default → Cleansing`
+## Play the whole bet
 
-Start on **Discover**, enter Jiayu’s Steam Deck pact, close the entry window, and explore the live Challenge Room. Move the clock by one day or one week, watch realistically spaced maker updates appear, post one update for the current day, and choose an outcome only when the deadline arrives.
+The experience follows one complete path:
 
-The five product surfaces are:
+`Create → Discover → Take the other side → Match → Run the clock → Fail → Pay up or default → Continue marked`
 
-- **Discover** — seven random pulls; ordinary pacts cannot be searched.
-- **Challenge Detail** — stake, deadline, and immutable proof contract.
+Start on **Discover**, meet Jiayu’s Steam Deck bet through a random pull, enter
+the draw, and open the live Challenge Room. Move the clock one day or one week
+at a time, reveal realistically spaced maker updates, leave one update for the
+current day, and choose an outcome when the deadline arrives.
+
+The five core surfaces are:
+
+- **Discover** — seven random pulls; ordinary bets cannot be searched.
+- **Bet Detail** — physical stake, deadline, and immutable proof contract.
 - **Match / Challenge Room** — one challenger is selected, then the visitor controls a variable-length clock and daily maker log.
-- **Outcome** — failure creates a direct-shipping window.
-- **Profile** — defaults are visible, the cleaning rule is explicit, and the visitor can publish again as the marked identity to experience the aftermath.
+- **Outcome** — failure opens a direct-shipping window.
+- **Profile** — defaults remain visible without banning the person; the visitor can publish again as the marked identity.
 
-A separate **Build With Us Lab** turns four open system problems into copyable contribution briefs. It is the project’s collaborator funnel, not a fictional team page.
+The separate **Build With Us Lab** turns unresolved system questions into
+contribution paths. It is the collaborator funnel, not a fictional team page.
 
 ## Enter through a real question
 
-This is not a job board and contributions are not limited to isolated starter tasks.
+This is not a job board, and contributions are not limited to isolated starter
+tasks.
 
 - **[First impressions](https://github.com/jiayu71900/stakes-concept-lab/discussions/new?category=first-impressions)** — tell us which moment changed your understanding of the product.
 - **[Break a rule](https://github.com/jiayu71900/stakes-concept-lab/discussions/new?category=break-a-rule)** — expose a concrete abuse, collusion, or incentive failure.
 - **[Shape the system](https://github.com/jiayu71900/stakes-concept-lab/discussions/new?category=shape-the-system)** — take an open edge toward durable product behavior, architecture, trust, operations, or community mechanics.
 
-Start with something concrete. Continue where ownership makes sense. See [CONTRIBUTING.md](CONTRIBUTING.md) for the working boundaries.
+Start with something concrete. Continue where ownership makes sense. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the working boundaries.
 
-## V0 rules frozen in this demo
+## Public rules in this experience
 
-- Ordinary pacts are discovered through limited random refreshes, never search.
-- Pact duration is chosen at creation time; V0 offers 7, 14, 21, 30, or 60 days.
-- A maker may post at most one Challenge Room update per day. Posting is optional, not a required streak.
+- Ordinary bets are discovered through limited random pulls, never search.
+- Bet duration is chosen at creation time: 7, 14, 21, 30, or 60 days.
+- A maker may post at most one Challenge Room update per day. Silence is allowed.
 - Three leaderboards exist: **Highest Stakes**, **Most Watched**, and **Most Interesting**.
-- Any unresolved default removes all of a creator’s pacts from leaderboards.
+- Any unresolved default removes all of a creator’s bets from leaderboards.
 - A default does **not** block creating, discovering, or challenging.
-- Defaulting on a pact surfaced through **Highest Stakes** adds 10 marks; ordinary defaults add 1.
-- If a later maker defaults on this user while this user is the selected challenger, one unresolved mark is cleaned. A +10 default therefore needs ten qualifying defaults; historical defaults remain visible.
-- The platform does not hold money or physical items in this concept.
+- Defaulting on a bet surfaced through **Highest Stakes** adds 10 marks; ordinary defaults add 1.
+- If a later maker defaults on this user while this user is the selected challenger, one unresolved mark is cleaned. Historical defaults remain visible.
+- The platform does not hold money or physical items in this public experience.
 
 ## Architecture
 
 ```text
 UI routes + components
-        ↓
-Domain objects
-        ↓
-Pure rule engines
-        ↓
-Mock scenario data / local demo state
+        → Domain objects
+        → Pure rule engines
+        → Mock scenario data / local experience state
 ```
 
-The interface consumes engine results; it does not own ranking, default, discovery, or transition rules. A future API can replace the mock layer without changing product pages.
+The interface consumes engine results; it does not own ranking, default,
+discovery, or transition rules. A future API can replace the mock layer without
+changing product pages.
 
 ```text
 domain/      Challenge, User, Stake, Default, Leaderboard, Discovery
 engine/      state machine, discovery, defaults, leaderboards
-mock/        concrete V0 story and fixture data
+mock/        concrete story and fixture data
 components/  interactive product experience
-app/         five routable pages
+app/         five routable pages plus the collaboration lab
 docs/        decisions, invariants, scenario, and open questions
 ```
 
-Read [the architecture notes](docs/ARCHITECTURE.md), [domain spec](docs/DOMAIN.md), and [state machine](docs/STATE_MACHINE.md) before changing rules.
+Read [the architecture notes](docs/ARCHITECTURE.md),
+[domain spec](docs/DOMAIN.md), and [state machine](docs/STATE_MACHINE.md) before
+changing rules.
 
 ## Open product surface, private production core
 
-This repository stays public as the playable product surface: the Concept Demo,
-basic domain language, visible V0 rules, mock engines, documentation, and
+This repository stays public as the playable product surface: the experience,
+basic domain language, visible rules, mock engines, documentation, and
 community collaboration.
 
 Real accounts and data, production ranking and abuse controls, verification,
-payments, fulfillment, disputes, and commercial operations belong in a separate
-private production repository. Public conversations may shape those boundaries;
-their operational implementation does not live here.
+payments, fulfillment, disputes, and commercial operations belong in a
+separate private production repository. Public conversations may shape those
+boundaries; their operational implementation does not live here.
 
 Read [the open-core boundary](docs/OPEN_CORE_BOUNDARY.md) before proposing work
 that touches identity, trust, ranking, payments, or operations.
@@ -109,16 +123,22 @@ npm test
 npm run lint
 ```
 
-## Intentionally not here
+## Intentionally outside the public repository
 
-No accounts, payments, database, logistics API, proof verification, recommendation model, or production trust system. Those choices are not “missing features”; they are outside the Concept Demo boundary.
-
-Questions that should not leak into V0 live in [Open Problems](docs/OPEN_PROBLEMS.md).
+Accounts, payments, production data, logistics integrations, proof authority,
+recommendation weights, and operational trust controls remain outside this
+repository. Questions at that boundary live in
+[Open Problems](docs/OPEN_PROBLEMS.md).
 
 ## Team
 
 **Small human core. AI-augmented by default. Open to people who want to shape it with us.**
 
-This is an independent, AI-native product lab—not a fictional roster. AI-assisted work covers systems exploration, rapid prototyping, research, UX experiments, and adversarial analysis. Human contributors are always represented as themselves.
+BET I DO. is an independent, AI-native product lab—not a fictional roster.
+AI-assisted work covers systems exploration, rapid prototyping, research, UX
+experiments, and adversarial analysis. Human contributors are always
+represented as themselves.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for useful first contributions. The in-product Lab starts with bounded work on cleansing abuse, discovery fairness, interestingness ranking, and proof contracts.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for useful entry points. The in-product
+Lab starts with cleansing abuse, discovery fairness, interestingness ranking,
+and proof contracts.

@@ -19,7 +19,7 @@ flowchart TD
 - **UI** renders results and captures intent. It may orchestrate a demo sequence but performs no ranking or default arithmetic.
 - **Domain** names shared product concepts and states.
 - **Engines** own challenge transitions, discovery eligibility, leaderboard ordering, default liability, and cleansing.
-- **Mock** supplies deterministic people, pacts, stakes, and a repeatable story.
+- **Mock** supplies deterministic people, bets, stakes, and a repeatable story.
 
 ## Two-repository replacement path
 

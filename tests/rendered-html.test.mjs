@@ -17,9 +17,9 @@ test("renders the product-specific Discover experience", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /<title>STAKES\. — Risk something real<\/title>/i);
-  assert.match(html, /What would you risk/);
-  assert.match(html, /RANDOM DISCOVERY/);
+  assert.match(html, /<title>BET I DO\. — Put something real on your word<\/title>/i);
+  assert.match(html, /Put something real/);
+  assert.match(html, /BET ON YOURSELF/);
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview|react-loading-skeleton/i);
 });
 
@@ -37,7 +37,7 @@ test("renders the consequence path and both join affordances without simulation 
     return response.text();
   }));
   const [challenge, outcome, profile, lab] = pages;
-  assert.match(challenge, /HOW TO JOIN THIS PACT/);
+  assert.match(challenge, /BET THEY WON’T/);
   assert.match(outcome, /LET 72H EXPIRE/);
   assert.match(profile, /PUBLISH AS[\s\S]*?JIAYU/);
   assert.match(profile, /CLEANING RULE/);

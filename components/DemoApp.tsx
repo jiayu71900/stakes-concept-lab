@@ -10,7 +10,7 @@ import { recordDefault } from "@/engine/defaultEngine";
 import { rankLeaderboard } from "@/engine/leaderboardEngine";
 
 type DemoView = "discover" | "challenge" | "match" | "outcome" | "profile" | "lab";
-const STORAGE_KEY = "stakes-concept-demo-v2";
+const STORAGE_KEY = "bet-i-do-demo-v3";
 const REPOSITORY_URL = "https://github.com/jiayu71900/stakes-concept-lab";
 const DISCUSSION_URLS = {
   firstImpressions: `${REPOSITORY_URL}/discussions/new?category=first-impressions`,
@@ -169,8 +169,8 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     const identity = createIdentityId === state.creator.id ? state.creator : state.viewer;
     const draft: Challenge = {
       ...structuredClone(challenges[0]),
-      id: "your-first-pact",
-      slug: "your-first-pact",
+      id: "your-first-bet",
+      slug: "your-first-bet",
       creatorId: identity.id,
       title,
       state: "DRAFT",
@@ -313,7 +313,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   };
 
   const copyBrief = async (title: string, brief: string) => {
-    await navigator.clipboard.writeText(`STAKES. contribution brief — ${title}\n\n${brief}`);
+    await navigator.clipboard.writeText(`BET I DO. contribution brief — ${title}\n\n${brief}`);
     setCopiedBrief(title);
     window.setTimeout(() => setCopiedBrief(null), 2200);
   };
@@ -322,20 +322,20 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   return (
     <main className="site-shell">
       <header className="topbar">
-        <button className="wordmark" onClick={() => navigate("discover")} aria-label="Go to Discover">STAKES<span>.</span></button>
+        <button className="wordmark" onClick={() => navigate("discover")} aria-label="Go to Discover">BET I DO<span>.</span></button>
         <nav className="nav-links" aria-label="Primary navigation">
           <button className={view === "discover" ? "active" : ""} onClick={() => navigate("discover")}>Discover</button>
           <button className={view === "lab" ? "active" : ""} onClick={() => navigate("lab")}>Build with us</button>
-          <button className="make-button" onClick={() => { setCreateIdentityId(state.viewer.id); setCreateOpen(true); }}>+ Make a pact</button>
+          <button className="make-button" onClick={() => { setCreateIdentityId(state.viewer.id); setCreateOpen(true); }}>+ Make a bet</button>
         </nav>
       </header>
 
-      {view !== "lab" && <div className="session-bar"><span>LIVE CONCEPT</span><p>Nothing here is explained in advance. Pull a pact and see what the system does.</p><button onClick={resetDemo}>Restart story</button></div>}
+      {view !== "lab" && <div className="session-bar"><span>PLAYABLE BET</span><p>Pull a stranger’s promise. Decide whether you believe it.</p><button onClick={resetDemo}>Restart story</button></div>}
 
       {showCreatedToast && (
         <div className="event-toast" role="status">
           <button onClick={() => setShowCreatedToast(false)} aria-label="Dismiss notification">×</button>
-          <span>NEW PACT OPEN</span>Your pact is now waiting in the random pool.
+          <span>BET IS OPEN</span>Your bet is now waiting in the random pool.
         </div>
       )}
 
@@ -351,7 +351,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
       {view === "lab" && <LabPage copiedBrief={copiedBrief} onCopy={copyBrief} />}
 
       <footer className="footer">
-        <div><strong>Small human core. AI-augmented by default.</strong><span>Built in the open with people who enjoy weird systems.</span></div>
+        <div><strong>Small human core. AI-augmented by default.</strong><span>Building a stranger kind of bet in the open.</span></div>
         <button onClick={() => navigate("lab")}>Build with us →</button>
       </footer>
 
@@ -382,9 +382,9 @@ function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen }:
   return (
     <div className="page-wrap discover-page">
       <section className="discover-intro">
-        <p className="eyebrow">RANDOM DISCOVERY · NO SEARCH</p>
-        <h1>What would you risk<br />to finally do it?</h1>
-        <div className="discover-mode"><strong>ONE ORDINARY PACT PER PULL</strong><span>“Next” replaces this card. The ranked lists below are the only browseable exception.</span></div>
+        <p className="eyebrow">BET ON YOURSELF · LET SOMEONE BET AGAINST YOU</p>
+        <h1>Put something real<br />on your word.</h1>
+        <div className="discover-mode"><strong>ONE ORDINARY BET PER PULL</strong><span>“Next” replaces this card. Ranked bets are the only browseable exception.</span></div>
       </section>
       <section className="discover-grid">
         <article className="challenge-card">
@@ -402,17 +402,17 @@ function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen }:
             </div>
           )}
           <div className="card-actions">
-            <button className="primary-action" onClick={() => onOpen(challenge)}>Challenge {creator.displayName} <span>↗</span></button>
-            <button className="shuffle-button" onClick={onRefresh} disabled={refreshes === 0} aria-label="Show another random pact"><span>↻</span> Next random pact</button>
+            <button className="primary-action" onClick={() => onOpen(challenge)}>Bet {creator.displayName} won’t <span>↗</span></button>
+            <button className="shuffle-button" onClick={onRefresh} disabled={refreshes === 0} aria-label="Show another random bet"><span>↻</span> Next random bet</button>
           </div>
           <div className="card-stats"><span><strong>{challenge.entrantCount}</strong> challengers</span><span><strong>{challenge.watchers}</strong> watching</span><span className="refresh-count"><strong>{refreshes}</strong> pulls left today</span></div>
         </article>
         <aside className="rule-note">
-          <span className="note-number">RULE 01</span><h3>You can’t search for an ordinary pact.</h3><p>Discovery stays a little strange on purpose: limited random pulls create attention without turning people’s goals into inventory.</p><div className="scribble">luck &gt; filters</div>
+          <span className="note-number">RULE 01</span><h3>You can’t search for an ordinary bet.</h3><p>Discovery stays a little strange on purpose: limited random pulls create attention without turning people’s promises into inventory.</p><div className="scribble">luck &gt; filters</div>
         </aside>
       </section>
       <section className="boards-teaser">
-        <div><p className="eyebrow">A SIDE DOOR</p><h2>Some pacts surface<br />without a random pull.</h2><span>The rules are easier to notice than to explain.</span></div>
+        <div><p className="eyebrow">A SIDE DOOR</p><h2>Some bets surface<br />without a random pull.</h2><span>The rules are easier to notice than to explain.</span></div>
         <button onClick={() => setBoardsOpen((open) => !open)}>{boardsOpen ? "CLOSE THE BOARDS" : "PEEK AT THE BOARDS →"}</button>
       </section>
       {boardsOpen && (
@@ -438,13 +438,13 @@ function PublisherChallengePage({ challenge, creator, onViewPublic }: { challeng
   return (
     <div className="page-wrap publisher-page">
       <section className="publisher-receipt">
-        <div className="publisher-status"><span>PACT OPEN</span><i /></div>
+        <div className="publisher-status"><span>BET OPEN</span><i /></div>
         <p className="eyebrow">PUBLISHED AS {creator.displayName.toUpperCase()}</p>
         <h1>{challenge.title}</h1>
         <div className="publisher-meta"><span><b>{challenge.durationDays}</b> DAYS</span><span><b>{challenge.entrantCount}</b> ENTRANTS</span><span><b>{challenge.watchers}</b> WATCHING</span></div>
         <StakeObject challenge={challenge} />
-        {marked && <div className="marked-publisher"><span>{creator.unresolvedDefaults}</span><div><strong>PUBLIC MARK ATTACHED</strong><p>The pact is live. What happens to its reach is left for the system to reveal.</p></div></div>}
-        <div className="publisher-next"><div><small>NEXT</small><strong>Updates open after a challenger is drawn.</strong><p>The maker may post at most one note per day. Silence is allowed.</p></div><button className="giant-action" onClick={onViewPublic}>VIEW PUBLIC PACT <span>→</span></button></div>
+        {marked && <div className="marked-publisher"><span>{creator.unresolvedDefaults}</span><div><strong>PUBLIC MARK ATTACHED</strong><p>The bet is live. What happens to its reach is left for the system to reveal.</p></div></div>}
+        <div className="publisher-next"><div><small>NEXT</small><strong>Updates open after a challenger is drawn.</strong><p>The maker may post at most one note per day. Silence is allowed.</p></div><button className="giant-action" onClick={onViewPublic}>VIEW PUBLIC BET <span>→</span></button></div>
       </section>
     </div>
   );
@@ -453,19 +453,19 @@ function PublisherChallengePage({ challenge, creator, onViewPublic }: { challeng
 function ChallengePage({ challenge, creatorName, joined, onJoin, onSelect }: { challenge: Challenge; creatorName: string; joined: boolean; onJoin: () => void; onSelect: () => void }) {
   return (
     <div className="page-wrap detail-page">
-      <div className="detail-head"><p className="eyebrow">CHALLENGE DETAIL · ENTRY OPEN</p><h1>{creatorName} put<br />something real behind it.</h1></div>
+      <div className="detail-head"><p className="eyebrow">THE BET · ENTRY OPEN</p><h1>{creatorName} put<br />something real on it.</h1></div>
       <div className="detail-grid">
         <section className="contract-card">
-          <div className="contract-label">THE PACT</div><p>I, <strong>{creatorName}</strong>, will</p><h2>{challenge.title}</h2>
-          <div className="contract-meta"><div><span>DEADLINE</span><strong>{challenge.deadlineLabel}</strong></div><div><span>PACT LENGTH</span><strong>{challenge.durationDays} days</strong></div></div>
+          <div className="contract-label">I BET I CAN</div><p>I, <strong>{creatorName}</strong>, will</p><h2>{challenge.title}</h2>
+          <div className="contract-meta"><div><span>DEADLINE</span><strong>{challenge.deadlineLabel}</strong></div><div><span>BET LENGTH</span><strong>{challenge.durationDays} days</strong></div></div>
           <div className="proof-list"><span>THE RECEIPTS</span>{challenge.proof.map((proof) => <div key={proof}><i>✓</i>{proof}</div>)}</div>
           <div className="signature">locked after matching</div>
         </section>
         <section className="entry-panel">
           <StakeObject challenge={challenge} /><blockquote>“{challenge.stake.significance}”</blockquote><div className="verified-line"><span>✓</span> Ownership mocked as verified</div>
           <div className="room-preview"><b>INSIDE THE ROOM</b><p>The clock can move one day or one week at a time. The maker may leave at most one update per day.</p></div>
-          <div className="entry-how"><b>HOW TO JOIN THIS PACT</b><span>Enter before the window closes. One challenger is drawn from everyone inside.</span></div>
-          {!joined ? <button className="giant-action" onClick={onJoin}>ENTER THE DRAW <span>→</span></button> : (
+          <div className="entry-how"><b>BET THEY WON’T</b><span>Enter before the window closes. One challenger is drawn from everyone inside.</span></div>
+          {!joined ? <button className="giant-action" onClick={onJoin}>TAKE THE OTHER SIDE <span>→</span></button> : (
             <div className="joined-panel"><span className="joined-check">✓</span><h3>You’re in.</h3><p>{challenge.entrantCount} people entered. One challenger will be selected when the window closes.</p><button className="giant-action" onClick={onSelect}>CLOSE ENTRY &amp; DRAW <span>→</span></button></div>
           )}
           <p className="fine-print">No money changes hands. What the system does at the deadline is revealed only after the match begins.</p>
@@ -494,7 +494,7 @@ function MatchPage({ state, onStart, onAdvance, onResolve, onPostMessage }: {
   if (!roomStarted) {
     return (
       <div className="match-page">
-        <div className="match-burst burst-one" /><div className="match-burst burst-two" /><p className="eyebrow">THE DRAW IS CLOSED</p><div className="selected-stamp">YOU WERE SELECTED</div>
+        <div className="match-burst burst-one" /><div className="match-burst burst-two" /><p className="eyebrow">BET ACCEPTED</p><div className="selected-stamp">YOU WERE SELECTED</div>
         <div className="versus"><div className="fighter"><span>{state.creator.avatar}</span><h2>{state.creator.displayName}</h2><p>MAKER</p></div><div className="vs-mark">VS</div><div className="fighter you"><span>YO</span><h2>YOU</h2><p>CHALLENGER</p></div></div>
         <StakeObject challenge={challenge} compact /><div className="match-time"><strong>{challenge.durationDays}</strong><span>DAYS<br />ON THE CLOCK</span></div><button className="dark-action" onClick={onStart}>ENTER THE CHALLENGE ROOM <span>→</span></button>
       </div>
@@ -526,7 +526,7 @@ function MatchPage({ state, onStart, onAdvance, onResolve, onPostMessage }: {
           )}
 
           {challenge.state === "SUCCESS" && (
-            <div className="success-reveal"><span>PACT COMPLETE</span><h2>The stake stays home.</h2><p>{state.creator.displayName} posted enough proof before day {challenge.durationDays}. The room closes without revealing the failure path.</p></div>
+            <div className="success-reveal"><span>I DID.</span><h2>The stake stays home.</h2><p>{state.creator.displayName} posted enough proof before day {challenge.durationDays}. The bet closes without revealing the failure path.</p></div>
           )}
 
           <div className="room-stake"><StakeObject challenge={challenge} compact /><p>The item remains with the maker while the clock runs.</p></div>
@@ -557,11 +557,11 @@ function OutcomePage({ state, onDefault, onShip, onProfile }: { state: DemoState
   const marks = state.featured.leaderboardPlacement?.board === "highest_stakes" ? 10 : 1;
   return (
     <div className="page-wrap outcome-page">
-      <div className="outcome-title"><p className="eyebrow">GOAL RESULT</p><span className="failed-word">FAILED</span><h1>{state.creator.displayName} missed the deadline.</h1></div>
+      <div className="outcome-title"><p className="eyebrow">LOST THE BET</p><span className="failed-word">FAILED</span><h1>{state.creator.displayName} missed the deadline.</h1></div>
       {!resolved ? (
         <div className="shipment-card"><div className="shipment-clock"><span>72</span><small>HOURS TO<br />ADD TRACKING</small></div><div className="shipment-copy"><p className="eyebrow">NOW THE STAKE MOVES</p><h2>{state.featured.stake.itemName}<br />→ You</h2><p>The platform doesn’t hold the item. {state.creator.displayName} must ship it directly—or carry the mark.</p><div className="outcome-actions"><button className="primary-action" onClick={onShip}>ADD TRACKING <span>✓</span></button><button className="default-button" onClick={onDefault}>LET 72H EXPIRE <span>+{marks}</span></button></div></div></div>
       ) : (
-        <div className={`resolution-card ${defaulted ? "is-default" : "is-shipped"}`}><span className="resolution-kicker">{defaulted ? `DEFAULT +${marks}` : "TRACKING ADDED"}</span><h2>{defaulted ? "The pact stays. So does the mark." : "The stake is moving."}</h2><p>{defaulted ? `${state.creator.displayName} keeps their identity and history. The next thing they do will carry this mark with it.` : `The ${state.featured.stake.itemName} is on its way to you. No default was recorded.`}</p><button className="dark-action" onClick={onProfile}>SEE {state.creator.displayName.toUpperCase()}’S PROFILE <span>→</span></button></div>
+        <div className={`resolution-card ${defaulted ? "is-default" : "is-shipped"}`}><span className="resolution-kicker">{defaulted ? `UNPAID BET +${marks}` : "PAID UP · TRACKING ADDED"}</span><h2>{defaulted ? "The bet stays. So does the mark." : "The stake is moving."}</h2><p>{defaulted ? `${state.creator.displayName} keeps their identity and history. The next thing they do will carry this mark with it.` : `The ${state.featured.stake.itemName} is on its way to you. No default was recorded.`}</p><button className="dark-action" onClick={onProfile}>SEE {state.creator.displayName.toUpperCase()}’S PROFILE <span>→</span></button></div>
       )}
       <aside className="rule-strip"><b>RULE 04</b> Default is a visible consequence, not a ban.</aside>
     </div>
@@ -600,7 +600,7 @@ const contributionBriefs = [
   {
     tag: "RANKING",
     title: "Define interesting",
-    question: "Can a pact be interesting without rewarding rage bait or expensive objects?",
+    question: "Can a bet be interesting without rewarding rage bait or expensive objects?",
     brief: "Propose a transparent V0 interestingness score using at most three signals. Include one gaming attack and a test case that prevents price from dominating the score.",
     deliverable: "Scoring proposal + adversarial cases",
   },
@@ -684,7 +684,7 @@ function CreateModal({ identity, onClose, onCreate }: { identity: User; onClose:
   return (
     <div className="modal-backdrop">
       <div className="create-modal" role="dialog" aria-modal="true" aria-labelledby="create-title">
-        <button className="modal-close" onClick={onClose} aria-label="Close create challenge dialog">×</button><p className="eyebrow">CREATE A PACT</p><div className="identity-banner"><span>{identity.avatar}</span><div><small>PUBLISHING AS</small><strong>{identity.displayName}</strong></div>{identity.unresolvedDefaults > 0 && <b>{identity.unresolvedDefaults} MARK{identity.unresolvedDefaults === 1 ? "" : "S"}</b>}</div><h2 id="create-title">Put something you love behind something you want.</h2><label>YOUR PROMISE<input value={title} onChange={(event) => setTitle(event.target.value)} /></label><fieldset className="duration-picker"><legend>HOW LONG DOES THIS PACT RUN?</legend><div>{[7, 14, 21, 30, 60].map((days) => <button type="button" className={duration === days ? "selected" : ""} key={days} onClick={() => setDuration(days)}>{days}<small>DAYS</small></button>)}</div></fieldset><div className="form-split"><label>PHYSICAL STAKE<input defaultValue="Nintendo Switch" /></label><label>FIRST ROOM NOTE<input defaultValue="Day one. Scope locked." /></label></div><label>WHAT COUNTS AS DONE?<textarea defaultValue="Public URL, working sign-in, and a timestamped release." /></label><div className="create-rule"><span>01</span> Once matched, the promise, duration, and proof contract lock.</div><button className="giant-action" disabled={!title.trim()} onClick={() => onCreate(duration, title.trim())}>OPEN {duration}-DAY PACT <span>→</span></button>
+        <button className="modal-close" onClick={onClose} aria-label="Close create challenge dialog">×</button><p className="eyebrow">MAKE A BET</p><div className="identity-banner"><span>{identity.avatar}</span><div><small>PUBLISHING AS</small><strong>{identity.displayName}</strong></div>{identity.unresolvedDefaults > 0 && <b>{identity.unresolvedDefaults} MARK{identity.unresolvedDefaults === 1 ? "" : "S"}</b>}</div><h2 id="create-title">Put something you love behind something you mean.</h2><label>I BET I CAN<input value={title} onChange={(event) => setTitle(event.target.value)} /></label><fieldset className="duration-picker"><legend>HOW LONG DOES THIS BET RUN?</legend><div>{[7, 14, 21, 30, 60].map((days) => <button type="button" className={duration === days ? "selected" : ""} key={days} onClick={() => setDuration(days)}>{days}<small>DAYS</small></button>)}</div></fieldset><div className="form-split"><label>I’M PUTTING UP<input defaultValue="Nintendo Switch" /></label><label>FIRST ROOM NOTE<input defaultValue="Day one. Scope locked." /></label></div><label>WHAT COUNTS AS DONE?<textarea defaultValue="Public URL, working sign-in, and a timestamped release." /></label><div className="create-rule"><span>01</span> Once matched, the promise, duration, and proof contract lock.</div><button className="giant-action" disabled={!title.trim()} onClick={() => onCreate(duration, title.trim())}>OPEN {duration}-DAY BET <span>→</span></button>
       </div>
     </div>
   );

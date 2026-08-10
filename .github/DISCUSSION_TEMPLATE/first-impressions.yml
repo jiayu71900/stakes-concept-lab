@@ -11,7 +11,7 @@ body:
       options:
         - Discover and enter the draw
         - Match and run the clock
-        - Complete the pact
+        - Win the bet
         - Miss, ship, or default
         - Continue as a marked identity
     validations:

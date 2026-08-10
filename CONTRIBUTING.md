@@ -1,6 +1,6 @@
 # Contributing
 
-STAKES. is an open, AI-native product lab for a social commitment system built around physical stakes. The demo is deliberately small; the system we are trying to understand is not.
+BET I DO. is an open, AI-native product lab for a social betting system built around promises and physical stakes. The public experience is one surface of a system intended to become durable.
 
 ## Start where you are
 

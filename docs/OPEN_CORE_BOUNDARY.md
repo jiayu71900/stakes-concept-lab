@@ -1,6 +1,6 @@
 # Open-core boundary
 
-STAKES. uses two repository boundaries so the public project can remain useful
+BET I DO. uses two repository boundaries so the public project can remain useful
 without turning production trust infrastructure into demo code.
 
 ## This public repository owns
