@@ -1,0 +1,44 @@
+title: "[Shape the system] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Take an open edge from question to durable implementation. Start with something concrete. Stay where ownership makes sense.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the system do you want to shape?
+      options:
+        - Product behavior and interaction
+        - Domain model and architecture
+        - Trust, abuse, and verification
+        - Discovery and ranking
+        - Operations and community mechanics
+        - A connection between several layers
+    validations:
+      required: true
+  - type: textarea
+    id: fragile
+    attributes:
+      label: What feels missing, fragile, or underspecified?
+    validations:
+      required: true
+  - type: textarea
+    id: first_move
+    attributes:
+      label: What would you change first?
+      description: It can be a product decision, architecture direction, working implementation, or operating model.
+    validations:
+      required: true
+  - type: textarea
+    id: durability
+    attributes:
+      label: What would make that direction durable in real use?
+    validations:
+      required: true
+  - type: textarea
+    id: ownership
+    attributes:
+      label: If it proves useful, what would you want to take further?
+    validations:
+      required: false

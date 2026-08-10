@@ -10,6 +10,8 @@ Chicken out — everyone knows.
 
 STAKES. is a working concept for a social commitment network built around physical stakes. This repository is a deliberately small, interactive V0: mock data, real domain rules, no production backend.
 
+**[Play the Concept Demo](https://stakes-concept-lab.jiayu71900.chatgpt.site)** · **[Join the Discussions](https://github.com/jiayu71900/stakes-concept-lab/discussions)**
+
 ## Try the 60-second story
 
 The demo follows one complete vertical slice:
@@ -27,6 +29,16 @@ The five product surfaces are:
 - **Profile** — defaults are visible, the cleaning rule is explicit, and the visitor can publish again as the marked identity to experience the aftermath.
 
 A separate **Build With Us Lab** turns four open system problems into copyable contribution briefs. It is the project’s collaborator funnel, not a fictional team page.
+
+## Enter through a real question
+
+This is not a job board and contributions are not limited to isolated starter tasks.
+
+- **[First impressions](https://github.com/jiayu71900/stakes-concept-lab/discussions/new?category=first-impressions)** — tell us which moment changed your understanding of the product.
+- **[Break a rule](https://github.com/jiayu71900/stakes-concept-lab/discussions/new?category=break-a-rule)** — expose a concrete abuse, collusion, or incentive failure.
+- **[Shape the system](https://github.com/jiayu71900/stakes-concept-lab/discussions/new?category=shape-the-system)** — take an open edge toward durable product behavior, architecture, trust, operations, or community mechanics.
+
+Start with something concrete. Continue where ownership makes sense. See [CONTRIBUTING.md](CONTRIBUTING.md) for the working boundaries.
 
 ## V0 rules frozen in this demo
 

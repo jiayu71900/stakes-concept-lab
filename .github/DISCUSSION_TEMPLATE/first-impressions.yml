@@ -1,0 +1,42 @@
+title: "[First impression] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Play one path before posting. We care more about the moment that changed your mind than a feature wishlist.
+  - type: dropdown
+    id: path
+    attributes:
+      label: Which path did you take?
+      options:
+        - Discover and enter the draw
+        - Match and run the clock
+        - Complete the pact
+        - Miss, ship, or default
+        - Continue as a marked identity
+    validations:
+      required: true
+  - type: textarea
+    id: moment
+    attributes:
+      label: Which moment stayed with you?
+      description: Tell us where the system became interesting, uncomfortable, or confusing.
+    validations:
+      required: true
+  - type: textarea
+    id: expectation
+    attributes:
+      label: What did you expect to happen instead?
+    validations:
+      required: false
+  - type: dropdown
+    id: relationship
+    attributes:
+      label: How are you approaching the project?
+      options:
+        - I would try this as a user
+        - I want to challenge the rules
+        - I may want to shape part of the system
+        - I am simply curious
+    validations:
+      required: true

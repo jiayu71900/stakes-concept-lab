@@ -11,6 +11,12 @@ import { rankLeaderboard } from "@/engine/leaderboardEngine";
 
 type DemoView = "discover" | "challenge" | "match" | "outcome" | "profile" | "lab";
 const STORAGE_KEY = "stakes-concept-demo-v2";
+const REPOSITORY_URL = "https://github.com/jiayu71900/stakes-concept-lab";
+const DISCUSSION_URLS = {
+  firstImpressions: `${REPOSITORY_URL}/discussions/new?category=first-impressions`,
+  breakRule: `${REPOSITORY_URL}/discussions/new?category=break-a-rule`,
+  shapeSystem: `${REPOSITORY_URL}/discussions/new?category=shape-the-system`,
+};
 
 const routes: Record<DemoView, string> = {
   discover: "/",
@@ -568,7 +574,7 @@ function ProfilePage({ state, onPublishAs }: { state: DemoState; onPublishAs: ()
     <div className="page-wrap profile-page">
       <section className="profile-head"><div className="profile-avatar">{state.creator.avatar}</div><div><p className="eyebrow">PUBLIC PROFILE</p><h1>{state.creator.displayName}</h1><p>{state.creator.handle} · {state.creator.bio}</p></div><div className={`default-counter ${marked ? "marked" : "clear"}`}><span>{state.creator.unresolvedDefaults}</span><strong>UNRESOLVED<br />DEFAULT{state.creator.unresolvedDefaults === 1 ? "" : "S"}</strong></div></section>
       <section className="profile-grid">
-        <div className="profile-panel aftermath-panel"><p className="eyebrow">WHAT HAPPENS NEXT</p><h2>{marked ? "The identity remains." : "No unresolved marks."}</h2><p>The ledger is public, but the profile is not frozen. Continue as this person and notice where the mark quietly follows.</p><button className="giant-action" onClick={onPublishAs}>PUBLISH AS {state.creator.displayName.toUpperCase()} <span>→</span></button></div>
+        <div className="profile-panel aftermath-panel"><p className="eyebrow">WHAT HAPPENS NEXT</p><h2>{marked ? "The identity remains." : "No unresolved marks."}</h2><p>The ledger is public, but the profile is not frozen. Continue as this person and notice where the mark quietly follows.</p><button className="giant-action" onClick={onPublishAs}>PUBLISH AS {state.creator.displayName.toUpperCase()} <span>→</span></button><a className="discussion-link" href={DISCUSSION_URLS.breakRule} target="_blank" rel="noreferrer">FOUND A LOOPHOLE? OPEN THE RULE ↗</a></div>
         <div className="cleansing-panel rules-only"><p className="eyebrow">CLEANING RULE</p><h2>Repayment happens from the other side.</h2><ol><li><b>01</b><span>This user must later be drawn as someone else’s challenger.</span></li><li><b>02</b><span>That maker must fail and default on this user.</span></li><li><b>03</b><span>One unresolved mark is then cleared. A +10 mark takes ten qualifying defaults.</span></li></ol><p>Marks never fall below zero. Historical defaults remain visible after cleaning.</p></div>
       </section>
       <section className="ledger"><div><span>{state.creator.historicalDefaults}</span><small>historical defaults</small></div><div><span>{state.creator.defaultsReceived}</span><small>defaults received</small></div><div><span>{state.creator.unresolvedDefaults}</span><small>unresolved marks now</small></div></section>
@@ -613,7 +619,7 @@ function LabPage({ copiedBrief, onCopy }: { copiedBrief: string | null; onCopy: 
       <section className="lab-hero">
         <p className="eyebrow">OPEN PRODUCT LAB · NO FICTIONAL TEAM</p>
         <h1>The demo is the invitation.</h1>
-        <p>We are not looking for people to “help build a website.” We are looking for people who want to argue with a strange system, break a rule, and leave behind a better experiment.</p>
+        <p>We are not looking for people to “help build a website.” We are looking for people who want to argue with a strange system, break a rule, and carry a promising direction into something durable.</p>
         <a className="join-jump" href="#join">HOW TO JOIN ↓</a>
       </section>
 
@@ -623,11 +629,11 @@ function LabPage({ copiedBrief, onCopy }: { copiedBrief: string | null; onCopy: 
         <i>→</i>
         <div><b>02</b><strong>Make the failure concrete</strong></div>
         <i>→</i>
-        <div><b>03</b><strong>Ship the smallest proof</strong></div>
+        <div><b>03</b><strong>Shape what should endure</strong></div>
       </section>
 
       <section className="briefs-section">
-        <div className="section-heading"><div><p className="eyebrow">FOUR REAL STARTING POINTS</p><h2>Choose a problem,<br />not a job title.</h2></div><p>Every card contains a bounded contribution that can be challenged, tested, or replaced. Copy one and use it as a first proposal.</p></div>
+        <div className="section-heading"><div><p className="eyebrow">FOUR REAL STARTING POINTS</p><h2>Choose a problem,<br />not a job title.</h2></div><p>Every card is an entry point, not a ceiling. Copy one as a first proposal, then follow the direction as far as useful ownership takes it.</p></div>
         <div className="briefs-grid">
           {contributionBriefs.map((item, index) => (
             <article className="brief-card" key={item.title}>
@@ -656,16 +662,17 @@ function LabPage({ copiedBrief, onCopy }: { copiedBrief: string | null; onCopy: 
         <div className="join-steps">
           <div><b>01</b><strong>Play one full path</strong><span>Run the clock, choose an outcome, and follow the consequence.</span></div>
           <div><b>02</b><strong>Pick one open edge</strong><span>Use a starter brief above, or name a failure the demo missed.</span></div>
-          <div><b>03</b><strong>Make it concrete</strong><span>Bring a short proposal, adversarial case, sketch, or tiny working proof.</span></div>
-          <div><b>04</b><strong>Open the conversation</strong><span>The public repository and Discussions link will appear here when the first contribution window opens.</span></div>
+          <div><b>03</b><strong>Make it concrete</strong><span>Bring a proposal, adversarial case, working change, architecture direction, or operating model.</span></div>
+          <div><b>04</b><strong>Follow ownership</strong><span>Start a public conversation. If the direction holds, take it beyond the first contribution.</span></div>
         </div>
-        <div className="join-channel"><span>CHANNEL</span><strong>Public GitHub repository + Discussions</strong><small>Opening next · no private inbox required</small></div>
+        <div className="join-actions"><a href={DISCUSSION_URLS.firstImpressions} target="_blank" rel="noreferrer"><small>I NOTICED SOMETHING</small><strong>First impressions</strong><span>Share the moment that changed your mind. ↗</span></a><a href={DISCUSSION_URLS.breakRule} target="_blank" rel="noreferrer"><small>I FOUND A LOOPHOLE</small><strong>Break a rule</strong><span>Make the abuse path concrete. ↗</span></a><a href={DISCUSSION_URLS.shapeSystem} target="_blank" rel="noreferrer"><small>I WANT TO TAKE THIS FURTHER</small><strong>Shape the system</strong><span>Move an open edge toward something durable. ↗</span></a></div>
+        <a className="join-channel" href={REPOSITORY_URL} target="_blank" rel="noreferrer"><span>HOME</span><strong>Public GitHub repository + Discussions</strong><small>Open source · no private inbox required ↗</small></a>
       </section>
 
       <section className="lab-close">
         <span>COME FOR THE DEMO.</span>
         <h2>Stay because the rules are harder than they look.</h2>
-        <p>The public repository and discussion channel are the next distribution step. Until then, these contribution briefs make the project’s open edges explicit and honest.</p>
+        <p>The public repository is open now. Enter through a real question, leave evidence, and stay with the direction if it deserves deeper ownership.</p>
       </section>
     </div>
   );

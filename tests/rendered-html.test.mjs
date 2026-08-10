@@ -41,7 +41,10 @@ test("renders the consequence path and both join affordances without simulation 
   assert.match(outcome, /LET 72H EXPIRE/);
   assert.match(profile, /PUBLISH AS[\s\S]*?JIAYU/);
   assert.match(profile, /CLEANING RULE/);
+  assert.match(profile, /FOUND A LOOPHOLE/);
   assert.match(lab, /HOW TO JOIN/);
+  assert.match(lab, /Shape the system/);
+  assert.match(lab, /github\.com\/jiayu71900\/stakes-concept-lab\/discussions/);
   assert.doesNotMatch(pages.join("\n"), />[^<]*simulat/i);
 });
 
