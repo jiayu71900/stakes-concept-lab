@@ -187,9 +187,11 @@ export function createInitialDemoState(): DemoState {
     simulatedDay: 0,
     messages: [
       { id: "msg-steam-1", challengeId: "steam-deck", authorId: "jiayu", day: 1, body: "Cut the scope in half. The tiny version might actually ship.", kind: "CREATOR_UPDATE" },
-      { id: "msg-steam-8", challengeId: "steam-deck", authorId: "jiayu", day: 8, body: "First playable loop is ugly, but it is finally a loop.", kind: "CREATOR_UPDATE" },
-      { id: "msg-steam-17", challengeId: "steam-deck", authorId: "jiayu", day: 17, body: "Boss fight works. Save system does not. Slight concern.", kind: "CREATOR_UPDATE" },
-      { id: "msg-steam-24", challengeId: "steam-deck", authorId: "jiayu", day: 24, body: "Six days left. I removed multiplayer and gained the will to live.", kind: "CREATOR_UPDATE" },
+      { id: "msg-steam-5", challengeId: "steam-deck", authorId: "jiayu", day: 5, body: "First playable loop is ugly, but it is finally a loop.", kind: "CREATOR_UPDATE" },
+      { id: "msg-steam-11", challengeId: "steam-deck", authorId: "jiayu", day: 11, body: "Sent a build to two friends. One found the fun; both found the same crash.", kind: "CREATOR_UPDATE" },
+      { id: "msg-steam-18", challengeId: "steam-deck", authorId: "jiayu", day: 18, body: "Boss fight works. Save system does not. Slight concern.", kind: "CREATOR_UPDATE" },
+      { id: "msg-steam-25", challengeId: "steam-deck", authorId: "jiayu", day: 25, body: "Five days left. Cut multiplayer and three nice-to-haves. It hurts less than losing the Deck.", kind: "CREATOR_UPDATE" },
+      { id: "msg-steam-29", challengeId: "steam-deck", authorId: "jiayu", day: 29, body: "Lost most of today to a corrupted save. One night left. Not making promises in this update.", kind: "CREATOR_UPDATE" },
     ],
     lastEvent: "READY",
   };

@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
-import type { Challenge, DemoState, LeaderboardType } from "@/domain/models";
+import type { Challenge, DemoState, LeaderboardType, User } from "@/domain/models";
 import { challenges, createInitialDemoState, creators } from "@/mock/demoData";
 import { deterministicDiscovery } from "@/engine/discoveryEngine";
 import { advanceThrough, transitionChallenge } from "@/engine/challengeStateMachine";
-import { cleanseOneDefault, isLeaderboardEligible, recordDefault } from "@/engine/defaultEngine";
+import { recordDefault } from "@/engine/defaultEngine";
 import { rankLeaderboard } from "@/engine/leaderboardEngine";
 
 type DemoView = "discover" | "challenge" | "match" | "outcome" | "profile" | "lab";
@@ -89,6 +89,8 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [showCreatedToast, setShowCreatedToast] = useState(false);
   const [copiedBrief, setCopiedBrief] = useState<string | null>(null);
+  const [createIdentityId, setCreateIdentityId] = useState("you");
+  const [publisherMode, setPublisherMode] = useState(false);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -134,6 +136,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   }, [state.creator]);
 
   const openChallenge = (challenge: Challenge) => {
+    setPublisherMode(false);
     setState((current) => ({
       ...current,
       featured: structuredClone(challenge),
@@ -157,11 +160,12 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   };
 
   const createChallenge = (durationDays: number, title: string) => {
+    const identity = createIdentityId === state.creator.id ? state.creator : state.viewer;
     const draft: Challenge = {
       ...structuredClone(challenges[0]),
       id: "your-first-pact",
       slug: "your-first-pact",
-      creatorId: state.viewer.id,
+      creatorId: identity.id,
       title,
       state: "DRAFT",
       durationDays,
@@ -169,10 +173,12 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
       entrantCount: 0,
       watchers: 0,
     };
-    transitionChallenge(draft, "OPEN");
-    setState((current) => ({ ...current, createdChallenge: true, lastEvent: "CREATED" }));
+    const opened = transitionChallenge(draft, "OPEN");
+    setState((current) => ({ ...current, creator: identity, featured: opened, joined: false, simulatedDay: 0, messages: [], createdChallenge: true, lastEvent: "CREATED" }));
+    setPublisherMode(true);
     setShowCreatedToast(true);
     setCreateOpen(false);
+    navigate("challenge");
   };
 
   const joinChallenge = () => {
@@ -293,16 +299,6 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     });
   };
 
-  const cleanseDefault = () => {
-    if (state.creator.unresolvedDefaults <= 0) return;
-    setState((current) => ({
-      ...current,
-      creator: cleanseOneDefault(current.creator),
-      defaultRecords: current.defaultRecords.map((record, index) => index === current.defaultRecords.length - 1 ? { ...record, status: "CLEANSED" as const } : record),
-      lastEvent: "CLEANSED",
-    }));
-  };
-
   const resetDemo = () => {
     window.localStorage.removeItem(STORAGE_KEY);
     setState(createInitialDemoState());
@@ -324,11 +320,11 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         <nav className="nav-links" aria-label="Primary navigation">
           <button className={view === "discover" ? "active" : ""} onClick={() => navigate("discover")}>Discover</button>
           <button className={view === "lab" ? "active" : ""} onClick={() => navigate("lab")}>Build with us</button>
-          <button className="make-button" onClick={() => setCreateOpen(true)}>+ Make a pact</button>
+          <button className="make-button" onClick={() => { setCreateIdentityId(state.viewer.id); setCreateOpen(true); }}>+ Make a pact</button>
         </nav>
       </header>
 
-      {view !== "lab" && <div className="session-bar"><span>LIVE CONCEPT</span><p>Nothing here is explained in advance. Pull a pact and see what the system does.</p><button onClick={resetDemo}>Restart simulation</button></div>}
+      {view !== "lab" && <div className="session-bar"><span>LIVE CONCEPT</span><p>Nothing here is explained in advance. Pull a pact and see what the system does.</p><button onClick={resetDemo}>Restart story</button></div>}
 
       {showCreatedToast && (
         <div className="event-toast" role="status">
@@ -341,11 +337,11 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         <DiscoverPage challenge={currentDiscovery} refreshes={state.viewer.refreshesRemaining} leaderboards={leaderboards} onRefresh={refreshDiscovery} onOpen={openChallenge} />
       )}
       {view === "challenge" && (
-        <ChallengePage challenge={state.featured} creatorName={state.creator.displayName} joined={state.joined} onJoin={joinChallenge} onSelect={simulateSelection} />
+        publisherMode ? <PublisherChallengePage challenge={state.featured} creator={state.creator} onViewPublic={() => setPublisherMode(false)} /> : <ChallengePage challenge={state.featured} creatorName={state.creator.displayName} joined={state.joined} onJoin={joinChallenge} onSelect={simulateSelection} />
       )}
       {view === "match" && <MatchPage state={state} onStart={startChallenge} onAdvance={advanceDays} onResolve={resolveChallenge} onPostMessage={postDailyMessage} />}
       {view === "outcome" && <OutcomePage state={state} onDefault={simulateDefault} onShip={simulateShipment} onProfile={() => navigate("profile")} />}
-      {view === "profile" && <ProfilePage state={state} onCleanse={cleanseDefault} onContinue={() => navigate("discover")} />}
+      {view === "profile" && <ProfilePage state={state} onPublishAs={() => { setCreateIdentityId(state.creator.id); setCreateOpen(true); }} />}
       {view === "lab" && <LabPage copiedBrief={copiedBrief} onCopy={copyBrief} />}
 
       <footer className="footer">
@@ -353,7 +349,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         <button onClick={() => navigate("lab")}>Build with us →</button>
       </footer>
 
-      {createOpen && <CreateModal onClose={() => setCreateOpen(false)} onCreate={createChallenge} />}
+      {createOpen && <CreateModal identity={createIdentityId === state.creator.id ? state.creator : state.viewer} onClose={() => setCreateOpen(false)} onCreate={createChallenge} />}
     </main>
   );
 }
@@ -431,6 +427,23 @@ function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen }:
   );
 }
 
+function PublisherChallengePage({ challenge, creator, onViewPublic }: { challenge: Challenge; creator: User; onViewPublic: () => void }) {
+  const marked = creator.unresolvedDefaults > 0;
+  return (
+    <div className="page-wrap publisher-page">
+      <section className="publisher-receipt">
+        <div className="publisher-status"><span>PACT OPEN</span><i /></div>
+        <p className="eyebrow">PUBLISHED AS {creator.displayName.toUpperCase()}</p>
+        <h1>{challenge.title}</h1>
+        <div className="publisher-meta"><span><b>{challenge.durationDays}</b> DAYS</span><span><b>{challenge.entrantCount}</b> ENTRANTS</span><span><b>{challenge.watchers}</b> WATCHING</span></div>
+        <StakeObject challenge={challenge} />
+        {marked && <div className="marked-publisher"><span>{creator.unresolvedDefaults}</span><div><strong>PUBLIC MARK ATTACHED</strong><p>The pact is live. What happens to its reach is left for the system to reveal.</p></div></div>}
+        <div className="publisher-next"><div><small>NEXT</small><strong>Updates open after a challenger is drawn.</strong><p>The maker may post at most one note per day. Silence is allowed.</p></div><button className="giant-action" onClick={onViewPublic}>VIEW PUBLIC PACT <span>→</span></button></div>
+      </section>
+    </div>
+  );
+}
+
 function ChallengePage({ challenge, creatorName, joined, onJoin, onSelect }: { challenge: Challenge; creatorName: string; joined: boolean; onJoin: () => void; onSelect: () => void }) {
   return (
     <div className="page-wrap detail-page">
@@ -444,9 +457,10 @@ function ChallengePage({ challenge, creatorName, joined, onJoin, onSelect }: { c
         </section>
         <section className="entry-panel">
           <StakeObject challenge={challenge} /><blockquote>“{challenge.stake.significance}”</blockquote><div className="verified-line"><span>✓</span> Ownership mocked as verified</div>
-          <div className="room-preview"><b>INSIDE THE ROOM</b><p>The clock can move one day or one week at a time. The maker may leave one update per simulated day.</p></div>
+          <div className="room-preview"><b>INSIDE THE ROOM</b><p>The clock can move one day or one week at a time. The maker may leave at most one update per day.</p></div>
+          <div className="entry-how"><b>HOW TO JOIN THIS PACT</b><span>Enter before the window closes. One challenger is drawn from everyone inside.</span></div>
           {!joined ? <button className="giant-action" onClick={onJoin}>ENTER THE DRAW <span>→</span></button> : (
-            <div className="joined-panel"><span className="joined-check">✓</span><h3>You’re in.</h3><p>{challenge.entrantCount} people entered. One challenger will be selected when the window closes.</p><button className="giant-action" onClick={onSelect}>SIMULATE SELECTION <span>→</span></button></div>
+            <div className="joined-panel"><span className="joined-check">✓</span><h3>You’re in.</h3><p>{challenge.entrantCount} people entered. One challenger will be selected when the window closes.</p><button className="giant-action" onClick={onSelect}>CLOSE ENTRY &amp; DRAW <span>→</span></button></div>
           )}
           <p className="fine-print">No money changes hands. What the system does at the deadline is revealed only after the match begins.</p>
         </section>
@@ -496,13 +510,13 @@ function MatchPage({ state, onStart, onAdvance, onResolve, onPostMessage }: {
 
           {challenge.state === "ACTIVE" && (
             <div className="time-controls">
-              <p>Move the simulation. New updates appear as their day arrives.</p>
+              <p>Move the clock. New updates appear on the days they were posted.</p>
               <div><button onClick={() => onAdvance(1)}>+ 1 DAY</button><button onClick={() => onAdvance(7)}>+ 7 DAYS</button><button className="deadline-jump" onClick={() => onAdvance(challenge.durationDays - state.simulatedDay)}>JUMP TO DEADLINE →</button></div>
             </div>
           )}
 
           {challenge.state === "AWAITING_RESULT" && (
-            <div className="result-gate"><span>THE CLOCK STOPPED</span><h2>What happened?</h2><p>The rest of the system stays hidden until an outcome is chosen.</p><div><button onClick={() => onResolve("SUCCESS")}>SIMULATE COMPLETED ✓</button><button onClick={() => onResolve("FAILED")}>SIMULATE MISSED →</button></div></div>
+            <div className="result-gate"><span>THE CLOCK STOPPED</span><h2>What happened?</h2><p>The rest of the system stays hidden until an outcome is chosen.</p><div><button onClick={() => onResolve("SUCCESS")}>MARK COMPLETED ✓</button><button onClick={() => onResolve("FAILED")}>MISS THE DEADLINE →</button></div></div>
           )}
 
           {challenge.state === "SUCCESS" && (
@@ -513,7 +527,7 @@ function MatchPage({ state, onStart, onAdvance, onResolve, onPostMessage }: {
         </section>
 
         <aside className="message-panel">
-          <div className="message-title"><span>MAKER LOG</span><strong>One note per simulated day.</strong></div>
+          <div className="message-title"><span>MAKER LOG</span><strong>Updates, not a streak.</strong><small>At most one note per day. Silence is allowed.</small></div>
           <div className="message-feed">
             {visibleMessages.length === 0 && <p className="empty-feed">No updates yet. Move to day one.</p>}
             {visibleMessages.map((message) => <article key={message.id}><div><span>{state.creator.avatar}</span><strong>{state.creator.displayName}</strong><small>DAY {message.day}</small></div><p>{message.body}</p></article>)}
@@ -539,28 +553,25 @@ function OutcomePage({ state, onDefault, onShip, onProfile }: { state: DemoState
     <div className="page-wrap outcome-page">
       <div className="outcome-title"><p className="eyebrow">GOAL RESULT</p><span className="failed-word">FAILED</span><h1>{state.creator.displayName} missed the deadline.</h1></div>
       {!resolved ? (
-        <div className="shipment-card"><div className="shipment-clock"><span>72</span><small>HOURS TO<br />ADD TRACKING</small></div><div className="shipment-copy"><p className="eyebrow">NOW THE STAKE MOVES</p><h2>{state.featured.stake.itemName}<br />→ You</h2><p>The platform doesn’t hold the item. {state.creator.displayName} must ship it directly—or carry the mark.</p><div className="outcome-actions"><button className="primary-action" onClick={onShip}>Simulate shipped <span>✓</span></button><button className="default-button" onClick={onDefault}>Simulate default <span>+{marks}</span></button></div></div></div>
+        <div className="shipment-card"><div className="shipment-clock"><span>72</span><small>HOURS TO<br />ADD TRACKING</small></div><div className="shipment-copy"><p className="eyebrow">NOW THE STAKE MOVES</p><h2>{state.featured.stake.itemName}<br />→ You</h2><p>The platform doesn’t hold the item. {state.creator.displayName} must ship it directly—or carry the mark.</p><div className="outcome-actions"><button className="primary-action" onClick={onShip}>ADD TRACKING <span>✓</span></button><button className="default-button" onClick={onDefault}>LET 72H EXPIRE <span>+{marks}</span></button></div></div></div>
       ) : (
-        <div className={`resolution-card ${defaulted ? "is-default" : "is-shipped"}`}><span className="resolution-kicker">{defaulted ? `DEFAULT +${marks}` : "TRACKING ADDED"}</span><h2>{defaulted ? "The pact stays. So does the mark." : "The stake is moving."}</h2><p>{defaulted ? `${state.creator.displayName} can still create, discover, and challenge. Their pacts simply disappear from every leaderboard until the debt is cleansed.` : `The ${state.featured.stake.itemName} is on its way to you. No default was recorded.`}</p><button className="dark-action" onClick={onProfile}>SEE {state.creator.displayName.toUpperCase()}’S PROFILE <span>→</span></button></div>
+        <div className={`resolution-card ${defaulted ? "is-default" : "is-shipped"}`}><span className="resolution-kicker">{defaulted ? `DEFAULT +${marks}` : "TRACKING ADDED"}</span><h2>{defaulted ? "The pact stays. So does the mark." : "The stake is moving."}</h2><p>{defaulted ? `${state.creator.displayName} keeps their identity and history. The next thing they do will carry this mark with it.` : `The ${state.featured.stake.itemName} is on its way to you. No default was recorded.`}</p><button className="dark-action" onClick={onProfile}>SEE {state.creator.displayName.toUpperCase()}’S PROFILE <span>→</span></button></div>
       )}
       <aside className="rule-strip"><b>RULE 04</b> Default is a visible consequence, not a ban.</aside>
     </div>
   );
 }
 
-function ProfilePage({ state, onCleanse, onContinue }: { state: DemoState; onCleanse: () => void; onContinue: () => void }) {
-  const eligible = isLeaderboardEligible(state.creator);
-  const canCleanse = state.creator.unresolvedDefaults > 0;
-  const isCleansed = state.lastEvent === "CLEANSED";
+function ProfilePage({ state, onPublishAs }: { state: DemoState; onPublishAs: () => void }) {
+  const marked = state.creator.unresolvedDefaults > 0;
   return (
     <div className="page-wrap profile-page">
-      {isCleansed && <div className="cleansed-banner"><div><span>DEFAULT CLEARED</span><strong>Debt doesn’t ban you.<br />It moves through the network.</strong></div><div className="zero-change">1 <span>→</span> 0</div></div>}
-      <section className="profile-head"><div className="profile-avatar">{state.creator.avatar}</div><div><p className="eyebrow">PUBLIC PROFILE</p><h1>{state.creator.displayName}</h1><p>{state.creator.handle} · {state.creator.bio}</p></div><div className={`default-counter ${eligible ? "clear" : "marked"}`}><span>{state.creator.unresolvedDefaults}</span><strong>UNRESOLVED<br />DEFAULT{state.creator.unresolvedDefaults === 1 ? "" : "S"}</strong></div></section>
+      <section className="profile-head"><div className="profile-avatar">{state.creator.avatar}</div><div><p className="eyebrow">PUBLIC PROFILE</p><h1>{state.creator.displayName}</h1><p>{state.creator.handle} · {state.creator.bio}</p></div><div className={`default-counter ${marked ? "marked" : "clear"}`}><span>{state.creator.unresolvedDefaults}</span><strong>UNRESOLVED<br />DEFAULT{state.creator.unresolvedDefaults === 1 ? "" : "S"}</strong></div></section>
       <section className="profile-grid">
-        <div className="profile-panel"><h2>{eligible ? "Clear to surface." : "Marked, not banned."}</h2><div className="permission-row yes"><span>✓</span><p><strong>Create challenges</strong><small>Nothing stops the next pact.</small></p></div><div className="permission-row yes"><span>✓</span><p><strong>Challenge others</strong><small>Participation stays open.</small></p></div><div className="permission-row yes"><span>✓</span><p><strong>Use random Discover</strong><small>Seven pulls still means seven pulls.</small></p></div><div className={`permission-row ${eligible ? "yes" : "no"}`}><span>{eligible ? "✓" : "×"}</span><p><strong>Enter leaderboards</strong><small>{eligible ? "All three boards are available." : "Any unresolved mark hides every created pact."}</small></p></div></div>
-        <div className="cleansing-panel"><p className="eyebrow">A FEW WEEKS LATER…</p><h2>{state.creator.displayName} becomes someone else’s challenger.</h2><div className="mini-story"><span>THEY FAIL</span><i>↓</i><span>THEY DON’T SHIP</span><i>↓</i><span>{state.creator.displayName.toUpperCase()} RECEIVES A DEFAULT</span></div><p>When someone defaults on the person they were matched with, one unresolved mark is cleansed.</p><button className="giant-action" onClick={canCleanse ? onCleanse : onContinue}>{canCleanse ? "SIMULATE CLEANSING" : "BACK TO DISCOVER"} <span>→</span></button></div>
+        <div className="profile-panel aftermath-panel"><p className="eyebrow">WHAT HAPPENS NEXT</p><h2>{marked ? "The identity remains." : "No unresolved marks."}</h2><p>The ledger is public, but the profile is not frozen. Continue as this person and notice where the mark quietly follows.</p><button className="giant-action" onClick={onPublishAs}>PUBLISH AS {state.creator.displayName.toUpperCase()} <span>→</span></button></div>
+        <div className="cleansing-panel rules-only"><p className="eyebrow">CLEANING RULE</p><h2>Repayment happens from the other side.</h2><ol><li><b>01</b><span>This user must later be drawn as someone else’s challenger.</span></li><li><b>02</b><span>That maker must fail and default on this user.</span></li><li><b>03</b><span>One unresolved mark is then cleared. A +10 mark takes ten qualifying defaults.</span></li></ol><p>Marks never fall below zero. Historical defaults remain visible after cleaning.</p></div>
       </section>
-      <section className="ledger"><div><span>{state.creator.historicalDefaults}</span><small>historical defaults</small></div><div><span>{state.creator.defaultsReceived}</span><small>defaults received</small></div><div><span>{eligible ? "YES" : "NO"}</span><small>leaderboard eligible</small></div></section>
+      <section className="ledger"><div><span>{state.creator.historicalDefaults}</span><small>historical defaults</small></div><div><span>{state.creator.defaultsReceived}</span><small>defaults received</small></div><div><span>{state.creator.unresolvedDefaults}</span><small>unresolved marks now</small></div></section>
     </div>
   );
 }
@@ -570,8 +581,8 @@ const contributionBriefs = [
     tag: "SYSTEMS",
     title: "Break default cleansing",
     question: "How would two friends manufacture defaults to erase each other’s marks?",
-    brief: "Map the smallest collusion loop in V0 default cleansing. Propose one countermeasure and one simulation that would prove it works without turning a default into a ban.",
-    deliverable: "Threat scenario + executable simulation",
+    brief: "Map the smallest collusion loop in V0 default cleaning. Propose one countermeasure and one test that would prove it works without turning a default into a ban.",
+    deliverable: "Threat scenario + playable test",
   },
   {
     tag: "DISCOVERY",
@@ -603,6 +614,7 @@ function LabPage({ copiedBrief, onCopy }: { copiedBrief: string | null; onCopy: 
         <p className="eyebrow">OPEN PRODUCT LAB · NO FICTIONAL TEAM</p>
         <h1>The demo is the invitation.</h1>
         <p>We are not looking for people to “help build a website.” We are looking for people who want to argue with a strange system, break a rule, and leave behind a better experiment.</p>
+        <a className="join-jump" href="#join">HOW TO JOIN ↓</a>
       </section>
 
       <section className="lab-principle">
@@ -639,6 +651,17 @@ function LabPage({ copiedBrief, onCopy }: { copiedBrief: string | null; onCopy: 
         </div>
       </section>
 
+      <section className="join-section" id="join">
+        <div className="join-heading"><p className="eyebrow">HOW TO JOIN</p><h2>Bring one sharp thing.</h2><p>No application form and no invented job title. Start with evidence that you noticed something worth changing.</p></div>
+        <div className="join-steps">
+          <div><b>01</b><strong>Play one full path</strong><span>Run the clock, choose an outcome, and follow the consequence.</span></div>
+          <div><b>02</b><strong>Pick one open edge</strong><span>Use a starter brief above, or name a failure the demo missed.</span></div>
+          <div><b>03</b><strong>Make it concrete</strong><span>Bring a short proposal, adversarial case, sketch, or tiny working proof.</span></div>
+          <div><b>04</b><strong>Open the conversation</strong><span>The public repository and Discussions link will appear here when the first contribution window opens.</span></div>
+        </div>
+        <div className="join-channel"><span>CHANNEL</span><strong>Public GitHub repository + Discussions</strong><small>Opening next · no private inbox required</small></div>
+      </section>
+
       <section className="lab-close">
         <span>COME FOR THE DEMO.</span>
         <h2>Stay because the rules are harder than they look.</h2>
@@ -648,13 +671,13 @@ function LabPage({ copiedBrief, onCopy }: { copiedBrief: string | null; onCopy: 
   );
 }
 
-function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (durationDays: number, title: string) => void }) {
+function CreateModal({ identity, onClose, onCreate }: { identity: User; onClose: () => void; onCreate: (durationDays: number, title: string) => void }) {
   const [duration, setDuration] = useState(21);
   const [title, setTitle] = useState("Publish my first public build");
   return (
     <div className="modal-backdrop">
       <div className="create-modal" role="dialog" aria-modal="true" aria-labelledby="create-title">
-        <button className="modal-close" onClick={onClose} aria-label="Close create challenge dialog">×</button><p className="eyebrow">CREATE · MOCK FLOW</p><h2 id="create-title">Put something you love behind something you want.</h2><label>YOUR PROMISE<input value={title} onChange={(event) => setTitle(event.target.value)} /></label><fieldset className="duration-picker"><legend>HOW LONG DOES THIS PACT RUN?</legend><div>{[7, 14, 21, 30, 60].map((days) => <button type="button" className={duration === days ? "selected" : ""} key={days} onClick={() => setDuration(days)}>{days}<small>DAYS</small></button>)}</div></fieldset><div className="form-split"><label>PHYSICAL STAKE<input defaultValue="Nintendo Switch" /></label><label>FIRST ROOM NOTE<input defaultValue="Day one. Scope locked." /></label></div><label>WHAT COUNTS AS DONE?<textarea defaultValue="Public URL, working sign-in, and a timestamped release." /></label><div className="create-rule"><span>01</span> Once matched, the promise, duration, and proof contract lock.</div><button className="giant-action" disabled={!title.trim()} onClick={() => onCreate(duration, title.trim())}>OPEN {duration}-DAY PACT <span>→</span></button>
+        <button className="modal-close" onClick={onClose} aria-label="Close create challenge dialog">×</button><p className="eyebrow">CREATE A PACT</p><div className="identity-banner"><span>{identity.avatar}</span><div><small>PUBLISHING AS</small><strong>{identity.displayName}</strong></div>{identity.unresolvedDefaults > 0 && <b>{identity.unresolvedDefaults} MARK{identity.unresolvedDefaults === 1 ? "" : "S"}</b>}</div><h2 id="create-title">Put something you love behind something you want.</h2><label>YOUR PROMISE<input value={title} onChange={(event) => setTitle(event.target.value)} /></label><fieldset className="duration-picker"><legend>HOW LONG DOES THIS PACT RUN?</legend><div>{[7, 14, 21, 30, 60].map((days) => <button type="button" className={duration === days ? "selected" : ""} key={days} onClick={() => setDuration(days)}>{days}<small>DAYS</small></button>)}</div></fieldset><div className="form-split"><label>PHYSICAL STAKE<input defaultValue="Nintendo Switch" /></label><label>FIRST ROOM NOTE<input defaultValue="Day one. Scope locked." /></label></div><label>WHAT COUNTS AS DONE?<textarea defaultValue="Public URL, working sign-in, and a timestamped release." /></label><div className="create-rule"><span>01</span> Once matched, the promise, duration, and proof contract lock.</div><button className="giant-action" disabled={!title.trim()} onClick={() => onCreate(duration, title.trim())}>OPEN {duration}-DAY PACT <span>→</span></button>
       </div>
     </div>
   );

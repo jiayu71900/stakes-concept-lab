@@ -30,6 +30,21 @@ test("all five core pages and the collaboration lab render", async () => {
   }
 });
 
+test("renders the consequence path and both join affordances without simulation copy", async () => {
+  const pages = await Promise.all(["/challenge", "/outcome", "/profile", "/lab"].map(async (pathname) => {
+    const response = await render(pathname);
+    assert.equal(response.status, 200, pathname);
+    return response.text();
+  }));
+  const [challenge, outcome, profile, lab] = pages;
+  assert.match(challenge, /HOW TO JOIN THIS PACT/);
+  assert.match(outcome, /LET 72H EXPIRE/);
+  assert.match(profile, /PUBLISH AS[\s\S]*?JIAYU/);
+  assert.match(profile, /CLEANING RULE/);
+  assert.match(lab, /HOW TO JOIN/);
+  assert.doesNotMatch(pages.join("\n"), />[^<]*simulat/i);
+});
+
 test("keeps product rules outside the UI", async () => {
   const [stateMachine, defaults, discovery, leaderboard] = await Promise.all([
     readFile(new URL("../engine/challengeStateMachine.ts", import.meta.url), "utf8"),

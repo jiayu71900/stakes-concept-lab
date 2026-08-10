@@ -16,7 +16,7 @@ The demo follows one complete vertical slice:
 
 `Create → Discover → Challenge → Match → Fail → Default → Cleansing`
 
-Start on **Discover**, enter Jiayu’s Steam Deck pact, simulate the challenger draw, then explore the live Challenge Room. Move the clock by one day or one week, watch maker updates appear, post one mock update for the current day, and choose an outcome only when the deadline arrives.
+Start on **Discover**, enter Jiayu’s Steam Deck pact, close the entry window, and explore the live Challenge Room. Move the clock by one day or one week, watch realistically spaced maker updates appear, post one update for the current day, and choose an outcome only when the deadline arrives.
 
 The five product surfaces are:
 
@@ -24,7 +24,7 @@ The five product surfaces are:
 - **Challenge Detail** — stake, deadline, and immutable proof contract.
 - **Match / Challenge Room** — one challenger is selected, then the visitor controls a variable-length clock and daily maker log.
 - **Outcome** — failure creates a direct-shipping window.
-- **Profile** — defaults are visible and affect discovery, not participation.
+- **Profile** — defaults are visible, the cleaning rule is explicit, and the visitor can publish again as the marked identity to experience the aftermath.
 
 A separate **Build With Us Lab** turns four open system problems into copyable contribution briefs. It is the project’s collaborator funnel, not a fictional team page.
 
@@ -32,12 +32,12 @@ A separate **Build With Us Lab** turns four open system problems into copyable c
 
 - Ordinary pacts are discovered through limited random refreshes, never search.
 - Pact duration is chosen at creation time; V0 offers 7, 14, 21, 30, or 60 days.
-- A maker may post at most one Challenge Room update per simulated day.
+- A maker may post at most one Challenge Room update per day. Posting is optional, not a required streak.
 - Three leaderboards exist: **Highest Stakes**, **Most Watched**, and **Most Interesting**.
 - Any unresolved default removes all of a creator’s pacts from leaderboards.
 - A default does **not** block creating, discovering, or challenging.
 - Defaulting on a pact surfaced through **Highest Stakes** adds 10 marks; ordinary defaults add 1.
-- If someone defaults on the person they were matched with, one unresolved mark is cleansed.
+- If a later maker defaults on this user while this user is the selected challenger, one unresolved mark is cleaned. A +10 default therefore needs ten qualifying defaults; historical defaults remain visible.
 - The platform does not hold money or physical items in this concept.
 
 ## Architecture
