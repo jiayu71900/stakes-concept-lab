@@ -388,24 +388,26 @@ function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen }:
       </section>
       <section className="discover-grid">
         <article className="challenge-card">
-          <div className="stack-label">RANDOM PULL {8 - refreshes} OF 7</div>
           <div className="card-topline">
+            <div className="stack-label"><span>RANDOM BET</span><b>{8 - refreshes} / 7</b></div>
             <div className="creator-chip"><span>{creator.avatar}</span>{creator.handle}</div>
             <div className="timer"><i /> {challenge.daysRemaining} days left</div>
           </div>
-          <div className="card-copy"><p>I WILL</p><h2>{challenge.title}.</h2><p className="promise">{challenge.promise}</p></div>
-          <StakeObject challenge={challenge} />
-          {challenge.leaderboardPlacement && (
-            <div className={`leaderboard-callout ${highStakes ? "danger" : ""}`}>
-              <span>{highStakes ? "×10" : `#${challenge.leaderboardPlacement.rank}`}</span>
-              <div><strong>{boardLabels[challenge.leaderboardPlacement.board]}</strong><small>{highStakes ? "Defaulting here costs 10 marks." : "Leaderboard discovery is earned, not searched."}</small></div>
+          <div className="bet-card-main">
+            <div className="card-copy"><p>I BET I CAN</p><h2>{challenge.title}.</h2><p className="promise">{challenge.promise}</p></div>
+            <div className="card-stake-panel">
+              <small>WHAT’S ON THE LINE</small>
+              <StakeObject challenge={challenge} />
+              {challenge.leaderboardPlacement && (
+                <div className={`leaderboard-callout ${highStakes ? "danger" : ""}`}>
+                  <span>{highStakes ? "×10" : `#${challenge.leaderboardPlacement.rank}`}</span>
+                  <div><strong>{boardLabels[challenge.leaderboardPlacement.board]}</strong><small>{highStakes ? "Defaulting here costs 10 marks." : "Leaderboard discovery is earned, not searched."}</small></div>
+                </div>
+              )}
+              <div className="card-social-proof"><span><strong>{challenge.entrantCount}</strong> challengers</span><span><strong>{challenge.watchers}</strong> watching</span></div>
             </div>
-          )}
-          <div className="card-actions">
-            <button className="primary-action" onClick={() => onOpen(challenge)}>Bet {creator.displayName} won’t <span>↗</span></button>
-            <button className="shuffle-button" onClick={onRefresh} disabled={refreshes === 0} aria-label="Show another random bet"><span>↻</span> Next random bet</button>
           </div>
-          <div className="card-stats"><span><strong>{challenge.entrantCount}</strong> challengers</span><span><strong>{challenge.watchers}</strong> watching</span><span className="refresh-count"><strong>{refreshes}</strong> pulls left today</span></div>
+          <div className="card-footer"><div className="card-actions"><button className="primary-action" onClick={() => onOpen(challenge)}>Bet {creator.displayName} won’t <span>↗</span></button><button className="shuffle-button" onClick={onRefresh} disabled={refreshes === 0} aria-label="Show another random bet"><span>↻</span> Pass</button></div><span className="refresh-count"><strong>{refreshes}</strong> pulls left today</span></div>
         </article>
         <aside className="rule-note">
           <span className="note-number">RULE 01</span><h3>You can’t search for an ordinary bet.</h3><p>Discovery stays a little strange on purpose: limited random pulls create attention without turning people’s promises into inventory.</p><div className="scribble">luck &gt; filters</div>

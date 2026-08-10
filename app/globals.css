@@ -53,52 +53,65 @@ button { color: inherit; }
 .discover-intro { display: grid; grid-template-columns: 1fr 1fr; align-items: end; margin-bottom: 44px; }
 .discover-intro .eyebrow { grid-column: 1 / -1; }
 .discover-intro h1 { margin: 0; font: 900 clamp(46px, 6.2vw, 86px)/.89 Arial Black, Arial, sans-serif; letter-spacing: -.075em; text-transform: uppercase; max-width: 850px; }
-.discover-mode { max-width: 385px; margin: 0 0 4px auto; padding: 16px 18px; border: 1.5px solid var(--ink); background: var(--acid); display: flex; flex-direction: column; gap: 6px; transform: rotate(1deg); }
+.discover-mode { max-width: 385px; margin: 0 0 4px auto; padding: 15px 0 15px 18px; border-left: 4px solid var(--coral); display: flex; flex-direction: column; gap: 6px; }
 .discover-mode strong { font: 900 11px Arial, sans-serif; letter-spacing: .1em; }
 .discover-mode span { font-size: 13px; line-height: 1.4; }
-.discover-grid { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 22px; align-items: stretch; }
+.discover-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; align-items: stretch; }
 
-.challenge-card { background: var(--white); border: 2px solid var(--ink); box-shadow: 9px 9px 0 var(--ink); padding: 28px; position: relative; }
-.challenge-card::before, .challenge-card::after { content: ""; position: absolute; inset: 9px -10px -10px 10px; border: 1.5px solid var(--ink); background: var(--coral); z-index: -1; }
-.challenge-card::after { inset: 18px -18px -18px 20px; background: var(--blue); z-index: -2; }
-.stack-label { position: absolute; top: -15px; left: 20px; background: var(--ink); color: white; padding: 7px 10px; font: 900 9px Arial, sans-serif; letter-spacing: .11em; }
-.card-topline { display: flex; justify-content: space-between; align-items: center; }
+.challenge-card { background: var(--white); border: 1.5px solid var(--ink); border-radius: 18px; box-shadow: 0 20px 45px rgba(23,24,22,.12); overflow: hidden; }
+.card-topline { min-height: 66px; padding: 12px 20px; display: flex; justify-content: flex-end; align-items: center; gap: 20px; background: var(--ink); color: var(--white); }
+.stack-label { margin-right: auto; display: flex; align-items: center; gap: 10px; font: 900 9px Arial, sans-serif; letter-spacing: .12em; }
+.stack-label span { color: var(--acid); }
+.stack-label b { padding: 6px 8px; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; font-size: 10px; }
 .creator-chip { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 800; }
-.creator-chip span { width: 34px; height: 34px; display: grid; place-items: center; background: var(--blue); color: white; border: 1px solid var(--ink); border-radius: 50%; font-size: 10px; }
+.creator-chip span { width: 34px; height: 34px; display: grid; place-items: center; background: var(--coral); color: var(--ink); border-radius: 50%; font-size: 10px; }
 .timer { font-size: 12px; font-weight: 800; text-transform: uppercase; display: flex; align-items: center; gap: 7px; }
-.timer i { width: 8px; height: 8px; border-radius: 50%; background: var(--coral); box-shadow: 0 0 0 5px rgba(255,105,73,.17); }
-.card-copy { padding: 48px 0 34px; max-width: 700px; }
-.card-copy > p:first-child { margin: 0 0 8px; font: 900 12px Arial, sans-serif; letter-spacing: .14em; }
-.card-copy h2 { font: 900 clamp(39px, 5.1vw, 70px)/.93 Arial Black, Arial, sans-serif; letter-spacing: -.065em; text-transform: uppercase; margin: 0 0 18px; }
-.card-copy .promise { font-size: 17px; color: var(--muted); line-height: 1.45; margin: 0; }
+.timer i { width: 7px; height: 7px; border-radius: 50%; background: var(--acid); box-shadow: 0 0 0 4px rgba(202,255,61,.13); }
+.bet-card-main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(270px, .65fr); }
+.card-copy { min-height: 420px; padding: 52px 42px 46px; border-right: 1px solid var(--line); display: flex; flex-direction: column; justify-content: center; }
+.card-copy > p:first-child { width: fit-content; margin: 0 0 17px; padding: 7px 10px; border-radius: 999px; background: var(--acid); font: 900 10px Arial, sans-serif; letter-spacing: .14em; }
+.card-copy h2 { font: 900 clamp(40px, 4.5vw, 63px)/.94 Arial Black, Arial, sans-serif; letter-spacing: -.06em; text-transform: uppercase; margin: 0 0 22px; }
+.card-copy .promise { max-width: 560px; font-size: 16px; color: var(--muted); line-height: 1.5; margin: 0; }
+.card-stake-panel { padding: 30px 24px 24px; background: #eeeadf; display: flex; flex-direction: column; gap: 16px; }
+.card-stake-panel > small { font: 900 9px Arial, sans-serif; letter-spacing: .15em; }
+.card-stake-panel .stake-object { width: 100%; padding: 20px; border-radius: 13px; flex-direction: column; align-items: flex-start; gap: 14px; }
+.card-stake-panel .stake-glyph { width: 52px; height: 52px; border-radius: 50%; transform: none; }
+.card-stake-panel .stake-object strong { white-space: normal; overflow: visible; }
 .stake-object { --stake-accent: var(--coral); display: flex; align-items: center; gap: 15px; background: var(--stake-accent); padding: 15px; border: 1.5px solid var(--ink); width: min(100%, 470px); }
 .stake-glyph { width: 58px; height: 58px; flex: none; border: 1.5px solid var(--ink); background: var(--white); display: grid; place-items: center; font: 900 16px Arial Black, Arial, sans-serif; transform: rotate(-3deg); }
 .stake-object > div:last-child { display: flex; flex-direction: column; min-width: 0; }
 .stake-object span { font: 900 9px Arial, sans-serif; letter-spacing: .12em; margin-bottom: 4px; }
 .stake-object strong { font: 900 19px/1.1 Arial Black, Arial, sans-serif; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stake-object small { font-size: 11px; margin-top: 4px; }
-.leaderboard-callout { position: absolute; right: 27px; bottom: 144px; width: 235px; padding: 11px 13px; background: var(--acid); border: 1.5px solid var(--ink); display: flex; gap: 11px; align-items: center; transform: rotate(1.5deg); }
+.leaderboard-callout { width: 100%; padding: 11px 13px; background: var(--acid); border: 1px solid var(--ink); border-radius: 10px; display: flex; gap: 11px; align-items: center; }
 .leaderboard-callout > span { font: 900 20px Arial Black, Arial, sans-serif; }
 .leaderboard-callout div { display: flex; flex-direction: column; }
 .leaderboard-callout strong { font-size: 12px; text-transform: uppercase; }
 .leaderboard-callout small { font-size: 9px; margin-top: 3px; }
 .leaderboard-callout.danger { background: var(--coral); }
-.card-actions { margin-top: 30px; display: flex; gap: 10px; }
+.card-social-proof { margin-top: auto; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.card-social-proof span { padding: 13px 0; color: var(--muted); font-size: 9px; text-transform: uppercase; }
+.card-social-proof span + span { padding-left: 13px; border-left: 1px solid var(--line); }
+.card-social-proof strong { display: block; color: var(--ink); font-size: 17px; margin-bottom: 3px; }
+.card-footer { min-height: 82px; padding: 15px 20px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 18px; }
+.card-actions { display: flex; gap: 10px; }
 .primary-action, .shuffle-button, .default-button, .dark-action, .giant-action { border: 1.5px solid var(--ink); cursor: pointer; font-weight: 900; text-transform: uppercase; transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
 .primary-action { min-height: 50px; padding: 0 19px; background: var(--acid); display: inline-flex; align-items: center; justify-content: space-between; gap: 32px; box-shadow: 4px 4px 0 var(--ink); }
+.challenge-card .primary-action, .challenge-card .shuffle-button { border-radius: 999px; box-shadow: none; }
+.challenge-card .primary-action { background: var(--ink); color: var(--white); }
+.challenge-card .primary-action:hover { background: var(--coral); color: var(--ink); transform: none; box-shadow: none; }
 .primary-action:hover, .giant-action:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
 .shuffle-button { background: transparent; padding: 0 17px; min-height: 50px; }
 .shuffle-button span { font-size: 20px; margin-right: 6px; }
 .shuffle-button:hover { background: var(--ink); color: var(--white); }
 .shuffle-button:disabled { opacity: .35; cursor: not-allowed; }
-.card-stats { display: flex; gap: 25px; border-top: 1px solid var(--line); padding-top: 21px; margin-top: 26px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
-.card-stats strong { color: var(--ink); font-size: 14px; }
-.card-stats .refresh-count { margin-left: auto; }
-.rule-note { background: var(--yellow); border: 2px solid var(--ink); padding: 28px 25px; position: relative; overflow: hidden; }
-.note-number { font: 900 11px monospace; border-bottom: 2px solid var(--ink); padding-bottom: 3px; }
-.rule-note h3 { font: 900 28px/.98 Arial Black, Arial, sans-serif; letter-spacing: -.04em; text-transform: uppercase; margin: 60px 0 18px; }
-.rule-note p { font-size: 14px; line-height: 1.5; }
-.scribble { position: absolute; bottom: 22px; right: 18px; font: italic 700 17px Georgia, serif; transform: rotate(-7deg); border-bottom: 2px solid var(--ink); }
+.card-footer .refresh-count { margin-left: auto; color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.card-footer .refresh-count strong { color: var(--ink); font-size: 13px; }
+.rule-note { background: var(--ink); color: var(--white); border-radius: 18px; padding: 28px 25px; position: relative; overflow: hidden; }
+.note-number { width: fit-content; display: block; padding: 7px 9px; border-radius: 999px; background: var(--acid); color: var(--ink); font: 900 9px monospace; }
+.rule-note h3 { font: 900 27px/1 Arial Black, Arial, sans-serif; letter-spacing: -.04em; text-transform: uppercase; margin: 55px 0 18px; }
+.rule-note p { color: #c9c6bd; font-size: 13px; line-height: 1.55; }
+.scribble { position: absolute; bottom: 22px; right: 18px; color: var(--acid); font: italic 700 16px Georgia, serif; transform: rotate(-5deg); border-bottom: 1px solid var(--acid); }
 
 .trust-section { margin-top: 86px; border: 2px solid var(--ink); background: var(--white); position: relative; }
 .trust-heading { padding: 30px; display: flex; justify-content: space-between; align-items: end; gap: 30px; border-bottom: 2px solid var(--ink); }
@@ -450,7 +463,8 @@ button { color: inherit; }
   .discover-grid, .detail-grid, .shipment-card, .profile-grid { grid-template-columns: 1fr; }
   .boards-teaser { align-items: start; flex-direction: column; }
   .rule-note { min-height: 270px; }
-  .leaderboard-callout { position: static; margin-top: 20px; width: min(100%, 320px); }
+  .bet-card-main { grid-template-columns: 1fr; }
+  .card-copy { min-height: 350px; border-right: 0; border-bottom: 1px solid var(--line); }
   .boards-grid { grid-template-columns: 1fr; }
   .board + .board { border-left: 0; border-top: 2px solid var(--ink); }
   .section-heading { grid-template-columns: 1fr; gap: 20px; }
@@ -496,14 +510,17 @@ button { color: inherit; }
   .journey-guide p { font-size: 10px; }
   .discover-page, .detail-page, .outcome-page, .profile-page { padding-top: 48px; }
   .discover-intro h1, .detail-head h1 { font-size: 43px; }
-  .challenge-card { padding: 20px; box-shadow: 6px 6px 0 var(--ink); }
-  .card-copy { padding: 37px 0 28px; }
+  .challenge-card { border-radius: 14px; box-shadow: 0 14px 32px rgba(23,24,22,.12); }
+  .card-topline { padding: 12px 15px; gap: 12px; flex-wrap: wrap; }
+  .stack-label { width: 100%; }
+  .card-copy { min-height: 330px; padding: 38px 24px 34px; }
   .card-copy h2 { font-size: 40px; }
+  .card-stake-panel { padding: 24px 20px; }
   .stake-object strong { font-size: 15px; }
+  .card-footer { align-items: stretch; flex-direction: column; padding: 18px; }
   .card-actions, .outcome-actions { flex-direction: column; }
+  .card-footer .refresh-count { margin-left: 0; text-align: center; }
   .shuffle-button { min-height: 46px; }
-  .card-stats { gap: 12px; flex-wrap: wrap; }
-  .card-stats .refresh-count { margin-left: 0; width: 100%; }
   .leaderboard-section { margin-top: 75px; }
   .boards-teaser { margin-top: 68px; padding: 24px; min-height: 230px; }
   .trust-section { margin-top: 68px; }
