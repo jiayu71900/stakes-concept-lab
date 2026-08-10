@@ -23,8 +23,8 @@ test("renders the product-specific Discover experience", async () => {
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview|react-loading-skeleton/i);
 });
 
-test("all five core pages render", async () => {
-  for (const pathname of ["/", "/challenge", "/match", "/outcome", "/profile"]) {
+test("all five core pages and the collaboration lab render", async () => {
+  for (const pathname of ["/", "/challenge", "/match", "/outcome", "/profile", "/lab"]) {
     const response = await render(pathname);
     assert.equal(response.status, 200, pathname);
   }

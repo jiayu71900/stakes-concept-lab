@@ -8,8 +8,9 @@ import { deterministicDiscovery } from "@/engine/discoveryEngine";
 import { advanceThrough, transitionChallenge } from "@/engine/challengeStateMachine";
 import { cleanseOneDefault, isLeaderboardEligible, recordDefault } from "@/engine/defaultEngine";
 import { rankLeaderboard } from "@/engine/leaderboardEngine";
+import { scenarioAt } from "@/mock/scenarioPresets";
 
-type DemoView = "discover" | "challenge" | "match" | "outcome" | "profile";
+type DemoView = "discover" | "challenge" | "match" | "outcome" | "profile" | "lab";
 const STORAGE_KEY = "stakes-concept-demo-v1";
 
 const routes: Record<DemoView, string> = {
@@ -18,6 +19,7 @@ const routes: Record<DemoView, string> = {
   match: "/match",
   outcome: "/outcome",
   profile: "/profile",
+  lab: "/lab",
 };
 
 const boardLabels: Record<LeaderboardType, string> = {
@@ -28,11 +30,22 @@ const boardLabels: Record<LeaderboardType, string> = {
 
 const journey = ["Create", "Discover", "Challenge", "Match", "Fail", "Default", "Cleansing"];
 
+const journeyDetails = [
+  "Write a goal, lock the proof contract, and put a physical item behind it.",
+  "See one ordinary pact at a time. Next replaces it; leaderboards are the only browseable exception.",
+  "Inspect the promise and stake, then enter the random challenger draw.",
+  "One entrant is selected before the clock starts: maker versus challenger.",
+  "Missed proof moves the pact into a 72-hour direct-shipping window.",
+  "No shipment means a public mark—not a ban. Leaderboard access is the consequence.",
+  "If someone later defaults on this user, one unresolved mark is cleared.",
+];
+
 function pathToView(pathname: string): DemoView {
   if (pathname.startsWith("/challenge")) return "challenge";
   if (pathname.startsWith("/match")) return "match";
   if (pathname.startsWith("/outcome")) return "outcome";
   if (pathname.startsWith("/profile")) return "profile";
+  if (pathname.startsWith("/lab")) return "lab";
   return "discover";
 }
 
@@ -53,6 +66,8 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   const [state, setState] = useState<DemoState>(createInitialDemoState);
   const [hydrated, setHydrated] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [showCreatedToast, setShowCreatedToast] = useState(false);
+  const [copiedBrief, setCopiedBrief] = useState<string | null>(null);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -75,6 +90,12 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   useEffect(() => {
     if (hydrated) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [hydrated, state]);
+
+  useEffect(() => {
+    if (!showCreatedToast) return;
+    const timeout = window.setTimeout(() => setShowCreatedToast(false), 4200);
+    return () => window.clearTimeout(timeout);
+  }, [showCreatedToast]);
 
   const navigate = (next: DemoView) => {
     window.history.pushState({}, "", routes[next]);
@@ -126,6 +147,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     };
     transitionChallenge(draft, "OPEN");
     setState((current) => ({ ...current, createdChallenge: true, lastEvent: "CREATED" }));
+    setShowCreatedToast(true);
     setCreateOpen(false);
   };
 
@@ -209,8 +231,27 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   const resetDemo = () => {
     window.localStorage.removeItem(STORAGE_KEY);
     setState(createInitialDemoState());
+    setShowCreatedToast(false);
     navigate("discover");
   };
+
+  const jumpToStage = (index: number) => {
+    if (index === 0) {
+      setCreateOpen(true);
+      return;
+    }
+    setState(scenarioAt(index));
+    const destination: DemoView = index === 1 ? "discover" : index === 2 ? "challenge" : index === 3 ? "match" : index <= 5 ? "outcome" : "profile";
+    navigate(destination);
+  };
+
+  const copyBrief = async (title: string, brief: string) => {
+    await navigator.clipboard.writeText(`STAKES. contribution brief — ${title}\n\n${brief}`);
+    setCopiedBrief(title);
+    window.setTimeout(() => setCopiedBrief(null), 2200);
+  };
+
+  const activeStage = activeJourneyStage(view, state, createOpen);
 
   return (
     <main className="site-shell">
@@ -219,6 +260,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         <nav className="nav-links" aria-label="Primary navigation">
           <button className={view === "discover" ? "active" : ""} onClick={() => navigate("discover")}>Discover</button>
           <button className={view === "profile" ? "active" : ""} onClick={() => navigate("profile")}>Profile</button>
+          <button className={view === "lab" ? "active" : ""} onClick={() => navigate("lab")}>Build with us</button>
           <button className="make-button" onClick={() => setCreateOpen(true)}>+ Make a pact</button>
         </nav>
       </header>
@@ -227,20 +269,32 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         <div className="rail-label">60-sec demo</div>
         <div className="rail-steps">
           {journey.map((step, index) => (
-            <div className={`rail-step ${journeyStatus(state, index)}`} key={step}>
+            <button className={`rail-step ${journeyStatus(state, index, activeStage)}`} key={step} onClick={() => jumpToStage(index)}>
               <span>{String(index + 1).padStart(2, "0")}</span>{step}
-            </div>
+            </button>
           ))}
         </div>
         <button className="reset-button" onClick={resetDemo}>Reset</button>
       </section>
 
-      {state.createdChallenge && view === "discover" && (
-        <div className="event-toast" role="status"><span>NEW PACT OPEN</span>“Publish my first public build” is now in the random pool.</div>
+      {view !== "lab" && (
+        <section className="journey-guide" aria-live="polite">
+          <span>{String(activeStage + 1).padStart(2, "0")}</span>
+          <strong>{journey[activeStage]}</strong>
+          <p>{journeyDetails[activeStage]}</p>
+          <small>Click any stage above to preview it directly.</small>
+        </section>
+      )}
+
+      {showCreatedToast && view === "discover" && (
+        <div className="event-toast" role="status">
+          <button onClick={() => setShowCreatedToast(false)} aria-label="Dismiss notification">×</button>
+          <span>NEW PACT OPEN</span>“Publish my first public build” is now in the random pool.
+        </div>
       )}
 
       {view === "discover" && (
-        <DiscoverPage challenge={currentDiscovery} refreshes={state.viewer.refreshesRemaining} leaderboards={leaderboards} onRefresh={refreshDiscovery} onOpen={openChallenge} />
+        <DiscoverPage challenge={currentDiscovery} refreshes={state.viewer.refreshesRemaining} leaderboards={leaderboards} onRefresh={refreshDiscovery} onOpen={openChallenge} onPreviewDefault={() => jumpToStage(5)} />
       )}
       {view === "challenge" && (
         <ChallengePage challenge={state.featured} creatorName={state.creator.displayName} joined={state.joined} onJoin={joinChallenge} onSelect={simulateSelection} />
@@ -248,10 +302,11 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
       {view === "match" && <MatchPage state={state} onFastForward={fastForward} />}
       {view === "outcome" && <OutcomePage state={state} onDefault={simulateDefault} onShip={simulateShipment} onProfile={() => navigate("profile")} />}
       {view === "profile" && <ProfilePage state={state} onCleanse={cleanseDefault} onContinue={() => navigate("discover")} />}
+      {view === "lab" && <LabPage copiedBrief={copiedBrief} onCopy={copyBrief} />}
 
       <footer className="footer">
         <div><strong>Small human core. AI-augmented by default.</strong><span>Built in the open with people who enjoy weird systems.</span></div>
-        <a href="https://github.com" target="_blank" rel="noreferrer">GitHub ↗</a>
+        <button onClick={() => navigate("lab")}>Build with us →</button>
       </footer>
 
       {createOpen && <CreateModal onClose={() => setCreateOpen(false)} onCreate={createChallenge} />}
@@ -259,10 +314,19 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   );
 }
 
-function journeyStatus(state: DemoState, index: number) {
+function activeJourneyStage(view: DemoView, state: DemoState, createOpen: boolean) {
+  if (createOpen) return 0;
+  if (view === "challenge") return 2;
+  if (view === "match") return 3;
+  if (view === "outcome") return state.lastEvent === "DEFAULTED" ? 5 : 4;
+  if (view === "profile") return 6;
+  return 1;
+}
+
+function journeyStatus(state: DemoState, index: number, activeStage: number) {
   const progress: Record<DemoState["lastEvent"], number> = { READY: 1, CREATED: 1, JOINED: 2, MATCHED: 3, FAILED: 4, SHIPPED: 4, DEFAULTED: 5, CLEANSED: 6 };
-  if (index < progress[state.lastEvent]) return "done";
-  if (index === progress[state.lastEvent]) return "current";
+  if (index === activeStage) return "current";
+  if (index < Math.max(progress[state.lastEvent], activeStage)) return "done";
   return "";
 }
 
@@ -275,12 +339,13 @@ function StakeObject({ challenge, compact = false }: { challenge: Challenge; com
   );
 }
 
-function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen }: {
+function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen, onPreviewDefault }: {
   challenge: Challenge;
   refreshes: number;
   leaderboards: { board: LeaderboardType; entries: ReturnType<typeof rankLeaderboard> }[];
   onRefresh: () => void;
   onOpen: (challenge: Challenge) => void;
+  onPreviewDefault: () => void;
 }) {
   const creator = creatorFor(challenge);
   const highStakes = challenge.leaderboardPlacement?.board === "highest_stakes";
@@ -289,10 +354,11 @@ function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen }:
       <section className="discover-intro">
         <p className="eyebrow">RANDOM DISCOVERY · NO SEARCH</p>
         <h1>What would you risk<br />to finally do it?</h1>
-        <p>Ordinary pacts only appear by chance. Seven pulls a day. Make them count.</p>
+        <div className="discover-mode"><strong>ONE ORDINARY PACT PER PULL</strong><span>“Next” replaces this card. The ranked lists below are the only browseable exception.</span></div>
       </section>
       <section className="discover-grid">
         <article className="challenge-card">
+          <div className="stack-label">RANDOM PULL {8 - refreshes} OF 7</div>
           <div className="card-topline">
             <div className="creator-chip"><span>{creator.avatar}</span>{creator.handle}</div>
             <div className="timer"><i /> {challenge.daysRemaining} days left</div>
@@ -314,6 +380,16 @@ function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen }:
         <aside className="rule-note">
           <span className="note-number">RULE 01</span><h3>You can’t search for an ordinary pact.</h3><p>Discovery stays a little strange on purpose: limited random pulls create attention without turning people’s goals into inventory.</p><div className="scribble">luck &gt; filters</div>
         </aside>
+      </section>
+      <section className="trust-section">
+        <div className="trust-heading"><p className="eyebrow">WHAT A DEFAULT ACTUALLY DOES</p><h2>A mark changes reach.<br />It does not lock the door.</h2></div>
+        <div className="trust-rules">
+          <div className="trust-rule mark"><span>01</span><strong>PUBLIC MARK</strong><p>Ordinary default +1. Highest Stakes default +10.</p></div>
+          <div className="trust-rule"><span>02</span><strong>KEEP PARTICIPATING</strong><p>Create, challenge others, and use Discover as normal.</p></div>
+          <div className="trust-rule blocked"><span>03</span><strong>LOSE LEADERBOARDS</strong><p>Every pact stays off all three boards while a mark is unresolved.</p></div>
+          <div className="trust-rule cleanse"><span>04</span><strong>GET CLEANSED</strong><p>If someone later defaults on you, one unresolved mark clears.</p></div>
+        </div>
+        <button className="trust-preview" onClick={onPreviewDefault}>Preview a marked profile <span>→</span></button>
       </section>
       <section className="leaderboard-section">
         <div className="section-heading"><div><p className="eyebrow">EARNED DISCOVERY</p><h2>Three ways to surface.</h2></div><p>One restriction across all three: an unresolved default removes every pact you make from the boards.</p></div>
@@ -345,6 +421,7 @@ function ChallengePage({ challenge, creatorName, joined, onJoin, onSelect }: { c
         </section>
         <section className="entry-panel">
           <StakeObject challenge={challenge} /><blockquote>“{challenge.stake.significance}”</blockquote><div className="verified-line"><span>✓</span> Ownership mocked as verified</div>
+          <div className="challenge-consequence"><b>IF THEY DEFAULT</b><span>+{challenge.leaderboardPlacement?.board === "highest_stakes" ? 10 : 1} public mark</span><span>Still allowed to play</span><span>Removed from leaderboards</span></div>
           {!joined ? <button className="giant-action" onClick={onJoin}>ENTER THE DRAW <span>→</span></button> : (
             <div className="joined-panel"><span className="joined-check">✓</span><h3>You’re in.</h3><p>{challenge.entrantCount} people entered. One challenger will be selected when the window closes.</p><button className="giant-action" onClick={onSelect}>SIMULATE SELECTION <span>→</span></button></div>
           )}
@@ -395,6 +472,89 @@ function ProfilePage({ state, onCleanse, onContinue }: { state: DemoState; onCle
         <div className="cleansing-panel"><p className="eyebrow">A FEW WEEKS LATER…</p><h2>{state.creator.displayName} becomes someone else’s challenger.</h2><div className="mini-story"><span>THEY FAIL</span><i>↓</i><span>THEY DON’T SHIP</span><i>↓</i><span>{state.creator.displayName.toUpperCase()} RECEIVES A DEFAULT</span></div><p>When someone defaults on the person they were matched with, one unresolved mark is cleansed.</p><button className="giant-action" onClick={canCleanse ? onCleanse : onContinue}>{canCleanse ? "SIMULATE CLEANSING" : "BACK TO DISCOVER"} <span>→</span></button></div>
       </section>
       <section className="ledger"><div><span>{state.creator.historicalDefaults}</span><small>historical defaults</small></div><div><span>{state.creator.defaultsReceived}</span><small>defaults received</small></div><div><span>{eligible ? "YES" : "NO"}</span><small>leaderboard eligible</small></div></section>
+    </div>
+  );
+}
+
+const contributionBriefs = [
+  {
+    tag: "SYSTEMS",
+    title: "Break default cleansing",
+    question: "How would two friends manufacture defaults to erase each other’s marks?",
+    brief: "Map the smallest collusion loop in V0 default cleansing. Propose one countermeasure and one simulation that would prove it works without turning a default into a ban.",
+    deliverable: "Threat scenario + executable simulation",
+  },
+  {
+    tag: "DISCOVERY",
+    title: "Make randomness fair",
+    question: "How do seven pulls feel surprising without starving new makers of attention?",
+    brief: "Design a controlled-randomness experiment for seven daily pulls. Define an exposure budget, one anti-repeat rule, and the metric that would reveal unfair distribution.",
+    deliverable: "Small engine experiment + fairness metric",
+  },
+  {
+    tag: "RANKING",
+    title: "Define interesting",
+    question: "Can a pact be interesting without rewarding rage bait or expensive objects?",
+    brief: "Propose a transparent V0 interestingness score using at most three signals. Include one gaming attack and a test case that prevents price from dominating the score.",
+    deliverable: "Scoring proposal + adversarial cases",
+  },
+  {
+    tag: "TRUST",
+    title: "Prove the promise",
+    question: "What evidence is strong enough when the challenger cannot be the judge?",
+    brief: "Choose one goal category and design its completion contract. Separate automatic evidence, review, and appeal while keeping the selected challenger out of the final decision.",
+    deliverable: "Completion contract + review boundary",
+  },
+];
+
+function LabPage({ copiedBrief, onCopy }: { copiedBrief: string | null; onCopy: (title: string, brief: string) => void }) {
+  return (
+    <div className="page-wrap lab-page">
+      <section className="lab-hero">
+        <p className="eyebrow">OPEN PRODUCT LAB · NO FICTIONAL TEAM</p>
+        <h1>The demo is the invitation.</h1>
+        <p>We are not looking for people to “help build a website.” We are looking for people who want to argue with a strange system, break a rule, and leave behind a better experiment.</p>
+      </section>
+
+      <section className="lab-principle">
+        <span>THE COLLABORATION LOOP</span>
+        <div><b>01</b><strong>Pick one uncomfortable rule</strong></div>
+        <i>→</i>
+        <div><b>02</b><strong>Make the failure concrete</strong></div>
+        <i>→</i>
+        <div><b>03</b><strong>Ship the smallest proof</strong></div>
+      </section>
+
+      <section className="briefs-section">
+        <div className="section-heading"><div><p className="eyebrow">FOUR REAL STARTING POINTS</p><h2>Choose a problem,<br />not a job title.</h2></div><p>Every card contains a bounded contribution that can be challenged, tested, or replaced. Copy one and use it as a first proposal.</p></div>
+        <div className="briefs-grid">
+          {contributionBriefs.map((item, index) => (
+            <article className="brief-card" key={item.title}>
+              <div className="brief-top"><span>{item.tag}</span><b>0{index + 1}</b></div>
+              <h3>{item.title}</h3>
+              <p>{item.question}</p>
+              <small>USEFUL FIRST OUTPUT</small>
+              <strong>{item.deliverable}</strong>
+              <button onClick={() => onCopy(item.title, item.brief)}>{copiedBrief === item.title ? "COPIED ✓" : "COPY STARTER BRIEF →"}</button>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="team-model">
+        <div className="team-title"><p className="eyebrow">HOW THIS TEAM ACTUALLY WORKS</p><h2>Small human core.<br />AI workbench.<br />Open edges.</h2></div>
+        <div className="team-layers">
+          <div><span>HUMAN CORE</span><strong>Product direction<br />& final judgment</strong><small>Real people are always named as themselves.</small></div>
+          <div><span>AI WORKBENCH</span><strong>Architecture · prototypes<br />research · red-team</strong><small>Working roles, never fictional employees.</small></div>
+          <div className="open-layer"><span>COMMUNITY</span><strong>Engineers · designers<br />researchers · operators</strong><small>Join through a concrete contribution, not a ceremonial title.</small></div>
+        </div>
+      </section>
+
+      <section className="lab-close">
+        <span>COME FOR THE DEMO.</span>
+        <h2>Stay because the rules are harder than they look.</h2>
+        <p>The public repository and discussion channel are the next distribution step. Until then, these contribution briefs make the project’s open edges explicit and honest.</p>
+      </section>
     </div>
   );
 }

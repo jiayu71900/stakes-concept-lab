@@ -26,6 +26,8 @@ The five product surfaces are:
 - **Outcome** — failure creates a direct-shipping window.
 - **Profile** — defaults are visible and affect discovery, not participation.
 
+A separate **Build With Us Lab** turns four open system problems into copyable contribution briefs. It is the project’s collaborator funnel, not a fictional team page.
+
 ## V0 rules frozen in this demo
 
 - Ordinary pacts are discovered through limited random refreshes, never search.
@@ -56,6 +58,7 @@ engine/      state machine, discovery, defaults, leaderboards
 mock/        concrete V0 story and fixture data
 components/  interactive product experience
 app/         five routable pages
+mock/        deterministic stage presets for the clickable demo map
 docs/        decisions, invariants, scenario, and open questions
 ```
 
@@ -91,4 +94,4 @@ Questions that should not leak into V0 live in [Open Problems](docs/OPEN_PROBLEM
 
 This is an independent, AI-native product lab—not a fictional roster. AI-assisted work covers systems exploration, rapid prototyping, research, UX experiments, and adversarial analysis. Human contributors are always represented as themselves.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for useful first contributions.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for useful first contributions. The in-product Lab starts with bounded work on cleansing abuse, discovery fairness, interestingness ranking, and proof contracts.
