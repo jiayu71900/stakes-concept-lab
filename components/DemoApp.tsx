@@ -312,6 +312,25 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     navigate("discover");
   };
 
+  const challengeAsProfile = () => {
+    setState((current) => {
+      const identity = { ...current.creator };
+      const nextIndex = challenges.findIndex((challenge) => challenge.creatorId !== identity.id);
+      const discoveryIndex = nextIndex >= 0 ? nextIndex : 0;
+      const nextChallenge = structuredClone(challenges[discoveryIndex]);
+      return {
+        ...createInitialDemoState(),
+        viewer: identity,
+        creator: { ...creatorFor(nextChallenge) },
+        featured: nextChallenge,
+        discoveryIndex,
+        defaultRecords: current.defaultRecords,
+        lastEvent: "READY",
+      };
+    });
+    navigate("discover");
+  };
+
   const copyBrief = async (title: string, brief: string) => {
     await navigator.clipboard.writeText(`BET I DO. contribution brief — ${title}\n\n${brief}`);
     setCopiedBrief(title);
@@ -347,7 +366,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
       )}
       {view === "match" && <MatchPage state={state} onStart={startChallenge} onAdvance={advanceDays} onResolve={resolveChallenge} onPostMessage={postDailyMessage} />}
       {view === "outcome" && <OutcomePage state={state} onDefault={simulateDefault} onShip={simulateShipment} onProfile={() => navigate("profile")} />}
-      {view === "profile" && <ProfilePage state={state} onPublishAs={() => { setCreateIdentityId(state.creator.id); setCreateOpen(true); }} />}
+      {view === "profile" && <ProfilePage state={state} onPublishAs={() => { setCreateIdentityId(state.creator.id); setCreateOpen(true); }} onChallengeAs={challengeAsProfile} />}
       {view === "lab" && <LabPage copiedBrief={copiedBrief} onCopy={copyBrief} />}
 
       <footer className="footer">
@@ -570,13 +589,13 @@ function OutcomePage({ state, onDefault, onShip, onProfile }: { state: DemoState
   );
 }
 
-function ProfilePage({ state, onPublishAs }: { state: DemoState; onPublishAs: () => void }) {
+function ProfilePage({ state, onPublishAs, onChallengeAs }: { state: DemoState; onPublishAs: () => void; onChallengeAs: () => void }) {
   const marked = state.creator.unresolvedDefaults > 0;
   return (
     <div className="page-wrap profile-page">
       <section className="profile-head"><div className="profile-avatar">{state.creator.avatar}</div><div><p className="eyebrow">PUBLIC PROFILE</p><h1>{state.creator.displayName}</h1><p>{state.creator.handle} · {state.creator.bio}</p></div><div className={`default-counter ${marked ? "marked" : "clear"}`}><span>{state.creator.unresolvedDefaults}</span><strong>UNRESOLVED<br />DEFAULT{state.creator.unresolvedDefaults === 1 ? "" : "S"}</strong></div></section>
       <section className="profile-grid">
-        <div className="profile-panel aftermath-panel"><p className="eyebrow">WHAT HAPPENS NEXT</p><h2>{marked ? "The identity remains." : "No unresolved marks."}</h2><p>The ledger is public, but the profile is not frozen. Continue as this person and notice where the mark quietly follows.</p><button className="giant-action" onClick={onPublishAs}>PUBLISH AS {state.creator.displayName.toUpperCase()} <span>→</span></button><a className="discussion-link" href={DISCUSSION_URLS.breakRule} target="_blank" rel="noreferrer">FOUND A LOOPHOLE? OPEN THE RULE ↗</a></div>
+        <div className="profile-panel aftermath-panel"><p className="eyebrow">WHAT HAPPENS NEXT</p><h2>{marked ? "The identity remains." : "No unresolved marks."}</h2><p>The ledger is public, but the profile is not frozen. Continue as this person and notice where the mark quietly follows.</p><div className="identity-actions"><button className="giant-action" onClick={onPublishAs}>PUBLISH AS {state.creator.displayName.toUpperCase()} <span>→</span></button><button className="giant-action secondary-identity-action" onClick={onChallengeAs}>CHALLENGE AS {state.creator.displayName.toUpperCase()} <span>→</span></button></div><small className="identity-action-note">Both paths stay open. The unresolved mark travels with this identity.</small><a className="discussion-link" href={DISCUSSION_URLS.breakRule} target="_blank" rel="noreferrer">FOUND A LOOPHOLE? OPEN THE RULE ↗</a></div>
         <div className="cleansing-panel rules-only"><p className="eyebrow">CLEANING RULE</p><h2>Repayment happens from the other side.</h2><ol><li><b>01</b><span>This user must later be drawn as someone else’s challenger.</span></li><li><b>02</b><span>That maker must fail and default on this user.</span></li><li><b>03</b><span>One unresolved mark is then cleared. A +10 mark takes ten qualifying defaults.</span></li></ol><p>Marks never fall below zero. Historical defaults remain visible after cleaning.</p></div>
       </section>
       <section className="ledger"><div><span>{state.creator.historicalDefaults}</span><small>historical defaults</small></div><div><span>{state.creator.defaultsReceived}</span><small>defaults received</small></div><div><span>{state.creator.unresolvedDefaults}</span><small>unresolved marks now</small></div></section>

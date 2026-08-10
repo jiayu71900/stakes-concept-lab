@@ -23,11 +23,21 @@ test("renders the product-specific Discover experience", async () => {
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview|react-loading-skeleton/i);
 });
 
-test("all five core pages and the collaboration lab render", async () => {
-  for (const pathname of ["/", "/challenge", "/match", "/outcome", "/profile", "/lab"]) {
+test("all five core pages, collaboration lab, and public teaser render", async () => {
+  for (const pathname of ["/", "/challenge", "/match", "/outcome", "/profile", "/lab", "/preview"]) {
     const response = await render(pathname);
     assert.equal(response.status, 200, pathname);
   }
+});
+
+test("public teaser reveals the emotional arc without publishing hidden mechanics", async () => {
+  const response = await render("/preview");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /PLAY THE 30-SECOND TICKET/);
+  assert.match(html, /REQUEST A WALKTHROUGH/);
+  assert.match(html, /Bring one sharp question/);
+  assert.doesNotMatch(html, /cleaning|highest stakes|ranking weight|default \+10/i);
 });
 
 test("renders the consequence path and both join affordances without simulation copy", async () => {
@@ -40,6 +50,7 @@ test("renders the consequence path and both join affordances without simulation 
   assert.match(challenge, /BET THEY WON’T/);
   assert.match(outcome, /LET 72H EXPIRE/);
   assert.match(profile, /PUBLISH AS[\s\S]*?JIAYU/);
+  assert.match(profile, /CHALLENGE AS[\s\S]*?JIAYU/);
   assert.match(profile, /CLEANING RULE/);
   assert.match(profile, /FOUND A LOOPHOLE/);
   assert.match(lab, /HOW TO JOIN/);
