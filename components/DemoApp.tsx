@@ -8,10 +8,9 @@ import { deterministicDiscovery } from "@/engine/discoveryEngine";
 import { advanceThrough, transitionChallenge } from "@/engine/challengeStateMachine";
 import { cleanseOneDefault, isLeaderboardEligible, recordDefault } from "@/engine/defaultEngine";
 import { rankLeaderboard } from "@/engine/leaderboardEngine";
-import { scenarioAt } from "@/mock/scenarioPresets";
 
 type DemoView = "discover" | "challenge" | "match" | "outcome" | "profile" | "lab";
-const STORAGE_KEY = "stakes-concept-demo-v1";
+const STORAGE_KEY = "stakes-concept-demo-v2";
 
 const routes: Record<DemoView, string> = {
   discover: "/",
@@ -27,18 +26,6 @@ const boardLabels: Record<LeaderboardType, string> = {
   most_watched: "Most watched",
   most_interesting: "Most interesting",
 };
-
-const journey = ["Create", "Discover", "Challenge", "Match", "Fail", "Default", "Cleansing"];
-
-const journeyDetails = [
-  "Write a goal, lock the proof contract, and put a physical item behind it.",
-  "See one ordinary pact at a time. Next replaces it; leaderboards are the only browseable exception.",
-  "Inspect the promise and stake, then enter the random challenger draw.",
-  "One entrant is selected before the clock starts: maker versus challenger.",
-  "Missed proof moves the pact into a 72-hour direct-shipping window.",
-  "No shipment means a public mark—not a ban. Leaderboard access is the consequence.",
-  "If someone later defaults on this user, one unresolved mark is cleared.",
-];
 
 function pathToView(pathname: string): DemoView {
   if (pathname.startsWith("/challenge")) return "challenge";
@@ -61,9 +48,43 @@ function creatorFor(challenge: Challenge) {
   return creators.find((creator) => creator.id === challenge.creatorId) ?? creators[0];
 }
 
+function createStateForView(view: DemoView): DemoState {
+  const base = createInitialDemoState();
+  if (view !== "match" && view !== "outcome" && view !== "profile") return base;
+
+  const matched = transitionChallenge(base.featured, "MATCHED");
+  const matchState: DemoState = {
+    ...base,
+    joined: true,
+    featured: {
+      ...matched,
+      match: { id: `match-${matched.id}`, challengeId: matched.id, creatorId: base.creator.id, challengerId: base.viewer.id, selectedAt: "2026-08-09T12:00:00.000Z" },
+    },
+    lastEvent: "MATCHED",
+  };
+  if (view === "match") return matchState;
+
+  const failedState: DemoState = {
+    ...matchState,
+    simulatedDay: matched.durationDays,
+    featured: { ...advanceThrough(matchState.featured, ["ACTIVE", "AWAITING_RESULT", "FAILED", "AWAITING_SHIPMENT"]), daysRemaining: 0 },
+    lastEvent: "FAILED",
+  };
+  if (view === "outcome") return failedState;
+
+  const defaulted = recordDefault(failedState.creator, failedState.viewer, failedState.featured);
+  return {
+    ...failedState,
+    creator: defaulted.debtor,
+    featured: transitionChallenge(failedState.featured, "DEFAULTED"),
+    defaultRecords: [defaulted.record],
+    lastEvent: "DEFAULTED",
+  };
+}
+
 export function DemoApp({ initialView }: { initialView: DemoView }) {
   const [view, setView] = useState<DemoView>(initialView);
-  const [state, setState] = useState<DemoState>(createInitialDemoState);
+  const [state, setState] = useState<DemoState>(() => createStateForView(initialView));
   const [hydrated, setHydrated] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [showCreatedToast, setShowCreatedToast] = useState(false);
@@ -118,6 +139,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
       featured: structuredClone(challenge),
       creator: { ...creatorFor(challenge) },
       joined: false,
+      simulatedDay: 0,
       lastEvent: current.lastEvent === "CREATED" ? "CREATED" : "READY",
     }));
     navigate("challenge");
@@ -134,14 +156,16 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     });
   };
 
-  const createChallenge = () => {
+  const createChallenge = (durationDays: number, title: string) => {
     const draft: Challenge = {
       ...structuredClone(challenges[0]),
       id: "your-first-pact",
       slug: "your-first-pact",
       creatorId: state.viewer.id,
-      title: "Publish my first public build",
+      title,
       state: "DRAFT",
+      durationDays,
+      daysRemaining: durationDays,
       entrantCount: 0,
       watchers: 0,
     };
@@ -180,19 +204,70 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
             selectedAt: new Date().toISOString(),
           },
         },
+        simulatedDay: 0,
         lastEvent: "MATCHED",
       };
     });
     navigate("match");
   };
 
-  const fastForward = () => {
+  const startChallenge = () => {
+    if (state.featured.state !== "MATCHED") return;
     setState((current) => ({
       ...current,
-      featured: advanceThrough(current.featured, ["ACTIVE", "AWAITING_RESULT", "FAILED", "AWAITING_SHIPMENT"]),
+      featured: { ...transitionChallenge(current.featured, "ACTIVE"), daysRemaining: current.featured.durationDays },
+      simulatedDay: 0,
+      lastEvent: "ACTIVE",
+    }));
+  };
+
+  const advanceDays = (amount: number) => {
+    if (state.featured.state !== "ACTIVE") return;
+    setState((current) => {
+      const nextDay = Math.min(current.featured.durationDays, current.simulatedDay + amount);
+      const atDeadline = nextDay === current.featured.durationDays;
+      const advanced = { ...current.featured, daysRemaining: current.featured.durationDays - nextDay };
+      return {
+        ...current,
+        featured: atDeadline ? transitionChallenge(advanced, "AWAITING_RESULT") : advanced,
+        simulatedDay: nextDay,
+        lastEvent: atDeadline ? "AWAITING_RESULT" : "ACTIVE",
+      };
+    });
+  };
+
+  const resolveChallenge = (result: "SUCCESS" | "FAILED") => {
+    if (state.featured.state !== "AWAITING_RESULT") return;
+    if (result === "SUCCESS") {
+      setState((current) => ({ ...current, featured: transitionChallenge(current.featured, "SUCCESS"), lastEvent: "SUCCESS" }));
+      return;
+    }
+    setState((current) => ({
+      ...current,
+      featured: advanceThrough(current.featured, ["FAILED", "AWAITING_SHIPMENT"]),
       lastEvent: "FAILED",
     }));
     navigate("outcome");
+  };
+
+  const postDailyMessage = (body: string) => {
+    const text = body.trim();
+    if (!text || state.simulatedDay < 1 || state.featured.state !== "ACTIVE") return;
+    setState((current) => {
+      const alreadyPosted = current.messages.some((message) => message.challengeId === current.featured.id && message.authorId === current.creator.id && message.day === current.simulatedDay);
+      if (alreadyPosted) return current;
+      return {
+        ...current,
+        messages: [...current.messages, {
+          id: `message-${current.featured.id}-${current.simulatedDay}`,
+          challengeId: current.featured.id,
+          authorId: current.creator.id,
+          day: current.simulatedDay,
+          body: text,
+          kind: "CREATOR_UPDATE",
+        }],
+      };
+    });
   };
 
   const simulateShipment = () => {
@@ -235,23 +310,12 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     navigate("discover");
   };
 
-  const jumpToStage = (index: number) => {
-    if (index === 0) {
-      setCreateOpen(true);
-      return;
-    }
-    setState(scenarioAt(index));
-    const destination: DemoView = index === 1 ? "discover" : index === 2 ? "challenge" : index === 3 ? "match" : index <= 5 ? "outcome" : "profile";
-    navigate(destination);
-  };
-
   const copyBrief = async (title: string, brief: string) => {
     await navigator.clipboard.writeText(`STAKES. contribution brief — ${title}\n\n${brief}`);
     setCopiedBrief(title);
     window.setTimeout(() => setCopiedBrief(null), 2200);
   };
 
-  const activeStage = activeJourneyStage(view, state, createOpen);
 
   return (
     <main className="site-shell">
@@ -259,47 +323,27 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         <button className="wordmark" onClick={() => navigate("discover")} aria-label="Go to Discover">STAKES<span>.</span></button>
         <nav className="nav-links" aria-label="Primary navigation">
           <button className={view === "discover" ? "active" : ""} onClick={() => navigate("discover")}>Discover</button>
-          <button className={view === "profile" ? "active" : ""} onClick={() => navigate("profile")}>Profile</button>
           <button className={view === "lab" ? "active" : ""} onClick={() => navigate("lab")}>Build with us</button>
           <button className="make-button" onClick={() => setCreateOpen(true)}>+ Make a pact</button>
         </nav>
       </header>
 
-      <section className="story-rail" aria-label="Demo story progress">
-        <div className="rail-label">60-sec demo</div>
-        <div className="rail-steps">
-          {journey.map((step, index) => (
-            <button className={`rail-step ${journeyStatus(state, index, activeStage)}`} key={step} onClick={() => jumpToStage(index)}>
-              <span>{String(index + 1).padStart(2, "0")}</span>{step}
-            </button>
-          ))}
-        </div>
-        <button className="reset-button" onClick={resetDemo}>Reset</button>
-      </section>
+      {view !== "lab" && <div className="session-bar"><span>LIVE CONCEPT</span><p>Nothing here is explained in advance. Pull a pact and see what the system does.</p><button onClick={resetDemo}>Restart simulation</button></div>}
 
-      {view !== "lab" && (
-        <section className="journey-guide" aria-live="polite">
-          <span>{String(activeStage + 1).padStart(2, "0")}</span>
-          <strong>{journey[activeStage]}</strong>
-          <p>{journeyDetails[activeStage]}</p>
-          <small>Click any stage above to preview it directly.</small>
-        </section>
-      )}
-
-      {showCreatedToast && view === "discover" && (
+      {showCreatedToast && (
         <div className="event-toast" role="status">
           <button onClick={() => setShowCreatedToast(false)} aria-label="Dismiss notification">×</button>
-          <span>NEW PACT OPEN</span>“Publish my first public build” is now in the random pool.
+          <span>NEW PACT OPEN</span>Your pact is now waiting in the random pool.
         </div>
       )}
 
       {view === "discover" && (
-        <DiscoverPage challenge={currentDiscovery} refreshes={state.viewer.refreshesRemaining} leaderboards={leaderboards} onRefresh={refreshDiscovery} onOpen={openChallenge} onPreviewDefault={() => jumpToStage(5)} />
+        <DiscoverPage challenge={currentDiscovery} refreshes={state.viewer.refreshesRemaining} leaderboards={leaderboards} onRefresh={refreshDiscovery} onOpen={openChallenge} />
       )}
       {view === "challenge" && (
         <ChallengePage challenge={state.featured} creatorName={state.creator.displayName} joined={state.joined} onJoin={joinChallenge} onSelect={simulateSelection} />
       )}
-      {view === "match" && <MatchPage state={state} onFastForward={fastForward} />}
+      {view === "match" && <MatchPage state={state} onStart={startChallenge} onAdvance={advanceDays} onResolve={resolveChallenge} onPostMessage={postDailyMessage} />}
       {view === "outcome" && <OutcomePage state={state} onDefault={simulateDefault} onShip={simulateShipment} onProfile={() => navigate("profile")} />}
       {view === "profile" && <ProfilePage state={state} onCleanse={cleanseDefault} onContinue={() => navigate("discover")} />}
       {view === "lab" && <LabPage copiedBrief={copiedBrief} onCopy={copyBrief} />}
@@ -314,22 +358,6 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   );
 }
 
-function activeJourneyStage(view: DemoView, state: DemoState, createOpen: boolean) {
-  if (createOpen) return 0;
-  if (view === "challenge") return 2;
-  if (view === "match") return 3;
-  if (view === "outcome") return state.lastEvent === "DEFAULTED" ? 5 : 4;
-  if (view === "profile") return 6;
-  return 1;
-}
-
-function journeyStatus(state: DemoState, index: number, activeStage: number) {
-  const progress: Record<DemoState["lastEvent"], number> = { READY: 1, CREATED: 1, JOINED: 2, MATCHED: 3, FAILED: 4, SHIPPED: 4, DEFAULTED: 5, CLEANSED: 6 };
-  if (index === activeStage) return "current";
-  if (index < Math.max(progress[state.lastEvent], activeStage)) return "done";
-  return "";
-}
-
 function StakeObject({ challenge, compact = false }: { challenge: Challenge; compact?: boolean }) {
   return (
     <div className={`stake-object ${compact ? "compact" : ""}`} style={{ "--stake-accent": challenge.stake.accent } as CSSProperties}>
@@ -339,16 +367,16 @@ function StakeObject({ challenge, compact = false }: { challenge: Challenge; com
   );
 }
 
-function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen, onPreviewDefault }: {
+function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen }: {
   challenge: Challenge;
   refreshes: number;
   leaderboards: { board: LeaderboardType; entries: ReturnType<typeof rankLeaderboard> }[];
   onRefresh: () => void;
   onOpen: (challenge: Challenge) => void;
-  onPreviewDefault: () => void;
 }) {
   const creator = creatorFor(challenge);
   const highStakes = challenge.leaderboardPlacement?.board === "highest_stakes";
+  const [boardsOpen, setBoardsOpen] = useState(false);
   return (
     <div className="page-wrap discover-page">
       <section className="discover-intro">
@@ -381,29 +409,24 @@ function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen, o
           <span className="note-number">RULE 01</span><h3>You can’t search for an ordinary pact.</h3><p>Discovery stays a little strange on purpose: limited random pulls create attention without turning people’s goals into inventory.</p><div className="scribble">luck &gt; filters</div>
         </aside>
       </section>
-      <section className="trust-section">
-        <div className="trust-heading"><p className="eyebrow">WHAT A DEFAULT ACTUALLY DOES</p><h2>A mark changes reach.<br />It does not lock the door.</h2></div>
-        <div className="trust-rules">
-          <div className="trust-rule mark"><span>01</span><strong>PUBLIC MARK</strong><p>Ordinary default +1. Highest Stakes default +10.</p></div>
-          <div className="trust-rule"><span>02</span><strong>KEEP PARTICIPATING</strong><p>Create, challenge others, and use Discover as normal.</p></div>
-          <div className="trust-rule blocked"><span>03</span><strong>LOSE LEADERBOARDS</strong><p>Every pact stays off all three boards while a mark is unresolved.</p></div>
-          <div className="trust-rule cleanse"><span>04</span><strong>GET CLEANSED</strong><p>If someone later defaults on you, one unresolved mark clears.</p></div>
-        </div>
-        <button className="trust-preview" onClick={onPreviewDefault}>Preview a marked profile <span>→</span></button>
+      <section className="boards-teaser">
+        <div><p className="eyebrow">A SIDE DOOR</p><h2>Some pacts surface<br />without a random pull.</h2><span>The rules are easier to notice than to explain.</span></div>
+        <button onClick={() => setBoardsOpen((open) => !open)}>{boardsOpen ? "CLOSE THE BOARDS" : "PEEK AT THE BOARDS →"}</button>
       </section>
-      <section className="leaderboard-section">
-        <div className="section-heading"><div><p className="eyebrow">EARNED DISCOVERY</p><h2>Three ways to surface.</h2></div><p>One restriction across all three: an unresolved default removes every pact you make from the boards.</p></div>
-        <div className="boards-grid">
-          {leaderboards.map(({ board, entries }) => (
-            <div className="board" key={board}>
-              <div className="board-title"><span>{board === "highest_stakes" ? "$$$" : board === "most_watched" ? "EYES" : "ODD"}</span><h3>{boardLabels[board]}</h3></div>
-              {entries.map(({ challenge: entry }, index) => (
-                <button className="board-row" key={entry.id} onClick={() => onOpen(entry)}><b>0{index + 1}</b><span>{entry.title}<small>{board === "highest_stakes" ? money(entry.stake.estimatedValue) : board === "most_watched" ? `${entry.watchers} watching` : `${entry.interestingScore}/100 weird`}</small></span></button>
-              ))}
-            </div>
-          ))}
-        </div>
-      </section>
+      {boardsOpen && (
+        <section className="leaderboard-section revealed">
+          <div className="boards-grid">
+            {leaderboards.map(({ board, entries }) => (
+              <div className="board" key={board}>
+                <div className="board-title"><span>{board === "highest_stakes" ? "$$$" : board === "most_watched" ? "EYES" : "ODD"}</span><h3>{boardLabels[board]}</h3></div>
+                {entries.map(({ challenge: entry }, index) => (
+                  <button className="board-row" key={entry.id} onClick={() => onOpen(entry)}><b>0{index + 1}</b><span>{entry.title}<small>{board === "highest_stakes" ? money(entry.stake.estimatedValue) : board === "most_watched" ? `${entry.watchers} watching` : `${entry.interestingScore}/100 weird`}</small></span></button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -415,29 +438,95 @@ function ChallengePage({ challenge, creatorName, joined, onJoin, onSelect }: { c
       <div className="detail-grid">
         <section className="contract-card">
           <div className="contract-label">THE PACT</div><p>I, <strong>{creatorName}</strong>, will</p><h2>{challenge.title}</h2>
-          <div className="contract-meta"><div><span>DEADLINE</span><strong>{challenge.deadlineLabel}</strong></div><div><span>TIME LEFT</span><strong>{challenge.daysRemaining} days</strong></div></div>
+          <div className="contract-meta"><div><span>DEADLINE</span><strong>{challenge.deadlineLabel}</strong></div><div><span>PACT LENGTH</span><strong>{challenge.durationDays} days</strong></div></div>
           <div className="proof-list"><span>THE RECEIPTS</span>{challenge.proof.map((proof) => <div key={proof}><i>✓</i>{proof}</div>)}</div>
           <div className="signature">locked after matching</div>
         </section>
         <section className="entry-panel">
           <StakeObject challenge={challenge} /><blockquote>“{challenge.stake.significance}”</blockquote><div className="verified-line"><span>✓</span> Ownership mocked as verified</div>
-          <div className="challenge-consequence"><b>IF THEY DEFAULT</b><span>+{challenge.leaderboardPlacement?.board === "highest_stakes" ? 10 : 1} public mark</span><span>Still allowed to play</span><span>Removed from leaderboards</span></div>
+          <div className="room-preview"><b>INSIDE THE ROOM</b><p>The clock can move one day or one week at a time. The maker may leave one update per simulated day.</p></div>
           {!joined ? <button className="giant-action" onClick={onJoin}>ENTER THE DRAW <span>→</span></button> : (
             <div className="joined-panel"><span className="joined-check">✓</span><h3>You’re in.</h3><p>{challenge.entrantCount} people entered. One challenger will be selected when the window closes.</p><button className="giant-action" onClick={onSelect}>SIMULATE SELECTION <span>→</span></button></div>
           )}
-          <p className="fine-print">No money changes hands. If the goal fails, the item ships directly to the selected challenger.</p>
+          <p className="fine-print">No money changes hands. What the system does at the deadline is revealed only after the match begins.</p>
         </section>
       </div>
     </div>
   );
 }
 
-function MatchPage({ state, onFastForward }: { state: DemoState; onFastForward: () => void }) {
+function MatchPage({ state, onStart, onAdvance, onResolve, onPostMessage }: {
+  state: DemoState;
+  onStart: () => void;
+  onAdvance: (days: number) => void;
+  onResolve: (result: "SUCCESS" | "FAILED") => void;
+  onPostMessage: (body: string) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const challenge = state.featured;
+  const visibleMessages = state.messages
+    .filter((message) => message.challengeId === challenge.id && message.day <= state.simulatedDay)
+    .toSorted((a, b) => b.day - a.day);
+  const postedToday = state.messages.some((message) => message.challengeId === challenge.id && message.authorId === state.creator.id && message.day === state.simulatedDay);
+  const progress = Math.round((state.simulatedDay / challenge.durationDays) * 100);
+  const roomStarted = challenge.state !== "MATCHED";
+
+  if (!roomStarted) {
+    return (
+      <div className="match-page">
+        <div className="match-burst burst-one" /><div className="match-burst burst-two" /><p className="eyebrow">THE DRAW IS CLOSED</p><div className="selected-stamp">YOU WERE SELECTED</div>
+        <div className="versus"><div className="fighter"><span>{state.creator.avatar}</span><h2>{state.creator.displayName}</h2><p>MAKER</p></div><div className="vs-mark">VS</div><div className="fighter you"><span>YO</span><h2>YOU</h2><p>CHALLENGER</p></div></div>
+        <StakeObject challenge={challenge} compact /><div className="match-time"><strong>{challenge.durationDays}</strong><span>DAYS<br />ON THE CLOCK</span></div><button className="dark-action" onClick={onStart}>ENTER THE CHALLENGE ROOM <span>→</span></button>
+      </div>
+    );
+  }
+
   return (
-    <div className="match-page">
-      <div className="match-burst burst-one" /><div className="match-burst burst-two" /><p className="eyebrow">THE DRAW IS CLOSED</p><div className="selected-stamp">YOU WERE SELECTED</div>
-      <div className="versus"><div className="fighter"><span>{state.creator.avatar}</span><h2>{state.creator.displayName}</h2><p>MAKER</p></div><div className="vs-mark">VS</div><div className="fighter you"><span>YO</span><h2>YOU</h2><p>CHALLENGER</p></div></div>
-      <StakeObject challenge={state.featured} compact /><div className="match-time"><strong>{state.featured.daysRemaining}</strong><span>DAYS<br />ON THE CLOCK</span></div><button className="dark-action" onClick={onFastForward}>FAST-FORWARD {state.featured.daysRemaining} DAYS <span>→</span></button>
+    <div className="page-wrap room-page">
+      <header className="room-head">
+        <div><p className="eyebrow">LIVE CHALLENGE ROOM</p><h1>{challenge.title}</h1></div>
+        <div className={`room-status status-${challenge.state.toLowerCase()}`}><i />{challenge.state.replaceAll("_", " ")}</div>
+      </header>
+
+      <div className="room-grid">
+        <section className="simulation-panel">
+          <div className="day-display"><span>DAY</span><strong>{state.simulatedDay}</strong><small>OF {challenge.durationDays}</small></div>
+          <div className="progress-track"><i style={{ width: `${progress}%` }} /></div>
+          <div className="room-stats"><span><b>{challenge.durationDays - state.simulatedDay}</b> days left</span><span><b>{progress}%</b> elapsed</span><span><b>{visibleMessages.length}</b> maker updates</span></div>
+
+          {challenge.state === "ACTIVE" && (
+            <div className="time-controls">
+              <p>Move the simulation. New updates appear as their day arrives.</p>
+              <div><button onClick={() => onAdvance(1)}>+ 1 DAY</button><button onClick={() => onAdvance(7)}>+ 7 DAYS</button><button className="deadline-jump" onClick={() => onAdvance(challenge.durationDays - state.simulatedDay)}>JUMP TO DEADLINE →</button></div>
+            </div>
+          )}
+
+          {challenge.state === "AWAITING_RESULT" && (
+            <div className="result-gate"><span>THE CLOCK STOPPED</span><h2>What happened?</h2><p>The rest of the system stays hidden until an outcome is chosen.</p><div><button onClick={() => onResolve("SUCCESS")}>SIMULATE COMPLETED ✓</button><button onClick={() => onResolve("FAILED")}>SIMULATE MISSED →</button></div></div>
+          )}
+
+          {challenge.state === "SUCCESS" && (
+            <div className="success-reveal"><span>PACT COMPLETE</span><h2>The stake stays home.</h2><p>{state.creator.displayName} posted enough proof before day {challenge.durationDays}. The room closes without revealing the failure path.</p></div>
+          )}
+
+          <div className="room-stake"><StakeObject challenge={challenge} compact /><p>The item remains with the maker while the clock runs.</p></div>
+        </section>
+
+        <aside className="message-panel">
+          <div className="message-title"><span>MAKER LOG</span><strong>One note per simulated day.</strong></div>
+          <div className="message-feed">
+            {visibleMessages.length === 0 && <p className="empty-feed">No updates yet. Move to day one.</p>}
+            {visibleMessages.map((message) => <article key={message.id}><div><span>{state.creator.avatar}</span><strong>{state.creator.displayName}</strong><small>DAY {message.day}</small></div><p>{message.body}</p></article>)}
+          </div>
+          {challenge.state === "ACTIVE" && (
+            <form className="message-composer" onSubmit={(event) => { event.preventDefault(); onPostMessage(draft); setDraft(""); }}>
+              <label htmlFor="daily-note">PLAY AS {state.creator.displayName.toUpperCase()} · DAY {state.simulatedDay}</label>
+              <textarea id="daily-note" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={state.simulatedDay < 1 || postedToday} maxLength={180} placeholder={state.simulatedDay < 1 ? "Start the clock first." : postedToday ? "Today’s note has already been posted." : "Leave today’s update…"} />
+              <div><small>{draft.length}/180</small><button disabled={!draft.trim() || state.simulatedDay < 1 || postedToday}>POST TODAY’S NOTE</button></div>
+            </form>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }
@@ -559,11 +648,13 @@ function LabPage({ copiedBrief, onCopy }: { copiedBrief: string | null; onCopy: 
   );
 }
 
-function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: () => void }) {
+function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (durationDays: number, title: string) => void }) {
+  const [duration, setDuration] = useState(21);
+  const [title, setTitle] = useState("Publish my first public build");
   return (
     <div className="modal-backdrop">
       <div className="create-modal" role="dialog" aria-modal="true" aria-labelledby="create-title">
-        <button className="modal-close" onClick={onClose} aria-label="Close create challenge dialog">×</button><p className="eyebrow">CREATE · MOCK FLOW</p><h2 id="create-title">Put something you love behind something you want.</h2><label>YOUR PROMISE<input defaultValue="Publish my first public build" /></label><div className="form-split"><label>DEADLINE<input defaultValue="30 days" /></label><label>PHYSICAL STAKE<input defaultValue="Nintendo Switch" /></label></div><label>WHAT COUNTS AS DONE?<textarea defaultValue="Public URL, working sign-in, and a timestamped release." /></label><div className="create-rule"><span>01</span> Once matched, the promise and proof contract lock.</div><button className="giant-action" onClick={onCreate}>OPEN THIS PACT <span>→</span></button>
+        <button className="modal-close" onClick={onClose} aria-label="Close create challenge dialog">×</button><p className="eyebrow">CREATE · MOCK FLOW</p><h2 id="create-title">Put something you love behind something you want.</h2><label>YOUR PROMISE<input value={title} onChange={(event) => setTitle(event.target.value)} /></label><fieldset className="duration-picker"><legend>HOW LONG DOES THIS PACT RUN?</legend><div>{[7, 14, 21, 30, 60].map((days) => <button type="button" className={duration === days ? "selected" : ""} key={days} onClick={() => setDuration(days)}>{days}<small>DAYS</small></button>)}</div></fieldset><div className="form-split"><label>PHYSICAL STAKE<input defaultValue="Nintendo Switch" /></label><label>FIRST ROOM NOTE<input defaultValue="Day one. Scope locked." /></label></div><label>WHAT COUNTS AS DONE?<textarea defaultValue="Public URL, working sign-in, and a timestamped release." /></label><div className="create-rule"><span>01</span> Once matched, the promise, duration, and proof contract lock.</div><button className="giant-action" disabled={!title.trim()} onClick={() => onCreate(duration, title.trim())}>OPEN {duration}-DAY PACT <span>→</span></button>
       </div>
     </div>
   );

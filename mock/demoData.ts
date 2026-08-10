@@ -70,6 +70,7 @@ export const challenges: Challenge[] = [
     promise: "A playable build, in public, before the timer hits zero.",
     proof: ["Public build is live", "Core loop is playable", "Release is timestamped"],
     deadlineLabel: "Aug 27, 2026",
+    durationDays: 30,
     daysRemaining: 18,
     stake: {
       id: "stake-steam-deck",
@@ -96,6 +97,7 @@ export const challenges: Challenge[] = [
     promise: "Twelve finished pieces and one very real opening night.",
     proof: ["Venue confirmed", "12 pieces catalogued", "Opening photo posted"],
     deadlineLabel: "Sep 12, 2026",
+    durationDays: 45,
     daysRemaining: 34,
     stake: {
       id: "stake-camera",
@@ -123,7 +125,8 @@ export const challenges: Challenge[] = [
     promise: "Ten paying customers. No more stealth mode.",
     proof: ["Product is public", "Billing is live", "10 receipts submitted"],
     deadlineLabel: "Sep 1, 2026",
-    daysRemaining: 22,
+    durationDays: 21,
+    daysRemaining: 21,
     stake: {
       id: "stake-macbook",
       itemName: "MacBook Pro 16\"",
@@ -150,6 +153,7 @@ export const challenges: Challenge[] = [
     promise: "Cross the line under 2:15 without pretending my watch died.",
     proof: ["Official race result", "GPS activity posted", "Finish photo"],
     deadlineLabel: "Oct 4, 2026",
+    durationDays: 56,
     daysRemaining: 55,
     stake: {
       id: "stake-headphones",
@@ -180,6 +184,13 @@ export function createInitialDemoState(): DemoState {
     joined: false,
     createdChallenge: false,
     defaultRecords: [],
+    simulatedDay: 0,
+    messages: [
+      { id: "msg-steam-1", challengeId: "steam-deck", authorId: "jiayu", day: 1, body: "Cut the scope in half. The tiny version might actually ship.", kind: "CREATOR_UPDATE" },
+      { id: "msg-steam-8", challengeId: "steam-deck", authorId: "jiayu", day: 8, body: "First playable loop is ugly, but it is finally a loop.", kind: "CREATOR_UPDATE" },
+      { id: "msg-steam-17", challengeId: "steam-deck", authorId: "jiayu", day: 17, body: "Boss fight works. Save system does not. Slight concern.", kind: "CREATOR_UPDATE" },
+      { id: "msg-steam-24", challengeId: "steam-deck", authorId: "jiayu", day: 24, body: "Six days left. I removed multiplayer and gained the will to live.", kind: "CREATOR_UPDATE" },
+    ],
     lastEvent: "READY",
   };
 }

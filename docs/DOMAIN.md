@@ -16,7 +16,7 @@ A physical item with an estimated value, condition, category, verification flag,
 
 ### Challenge
 
-The maker’s goal contract: promise, deadline, proof checklist, stake, creator, entrants, watchers, interesting score, state, and optional leaderboard placement or match.
+The maker’s goal contract: promise, chosen duration, deadline, proof checklist, stake, creator, entrants, watchers, interesting score, state, and optional leaderboard placement or match.
 
 Invariant: leaderboard placement is an attribute, not a challenge state.
 
@@ -35,6 +35,12 @@ One of `highest_stakes`, `most_watched`, or `most_interesting`. All boards share
 ### Discovery
 
 A session-level record of seen challenges and remaining pulls. Ordinary discovery filters open, non-owned, unseen challenges and returns one at random. Search is intentionally absent.
+
+### Challenge Message
+
+A maker-authored room update tied to a challenge and simulated day.
+
+Invariant: a maker may create at most one message for a challenge on a given day. Advancing the simulation reveals messages whose day has arrived; future updates remain hidden.
 
 ## V0 cleansing
 

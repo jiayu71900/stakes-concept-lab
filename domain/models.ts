@@ -62,6 +62,15 @@ export interface Match {
   selectedAt: string;
 }
 
+export interface ChallengeMessage {
+  id: string;
+  challengeId: string;
+  authorId: string;
+  day: number;
+  body: string;
+  kind: "CREATOR_UPDATE";
+}
+
 export interface Challenge {
   id: string;
   slug: string;
@@ -70,6 +79,7 @@ export interface Challenge {
   promise: string;
   proof: string[];
   deadlineLabel: string;
+  durationDays: number;
   daysRemaining: number;
   stake: Stake;
   state: ChallengeState;
@@ -94,11 +104,16 @@ export interface DemoState {
   joined: boolean;
   createdChallenge: boolean;
   defaultRecords: DefaultRecord[];
+  simulatedDay: number;
+  messages: ChallengeMessage[];
   lastEvent:
     | "READY"
     | "CREATED"
     | "JOINED"
     | "MATCHED"
+    | "ACTIVE"
+    | "AWAITING_RESULT"
+    | "SUCCESS"
     | "FAILED"
     | "SHIPPED"
     | "DEFAULTED"

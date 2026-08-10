@@ -16,13 +16,13 @@ The demo follows one complete vertical slice:
 
 `Create → Discover → Challenge → Match → Fail → Default → Cleansing`
 
-Start on **Discover**, enter Jiayu’s Steam Deck pact, simulate the challenger draw, jump to the deadline, choose **Default**, inspect the public mark, then simulate cleansing.
+Start on **Discover**, enter Jiayu’s Steam Deck pact, simulate the challenger draw, then explore the live Challenge Room. Move the clock by one day or one week, watch maker updates appear, post one mock update for the current day, and choose an outcome only when the deadline arrives.
 
 The five product surfaces are:
 
 - **Discover** — seven random pulls; ordinary pacts cannot be searched.
 - **Challenge Detail** — stake, deadline, and immutable proof contract.
-- **Match** — one challenger is selected before the clock starts.
+- **Match / Challenge Room** — one challenger is selected, then the visitor controls a variable-length clock and daily maker log.
 - **Outcome** — failure creates a direct-shipping window.
 - **Profile** — defaults are visible and affect discovery, not participation.
 
@@ -31,6 +31,8 @@ A separate **Build With Us Lab** turns four open system problems into copyable c
 ## V0 rules frozen in this demo
 
 - Ordinary pacts are discovered through limited random refreshes, never search.
+- Pact duration is chosen at creation time; V0 offers 7, 14, 21, 30, or 60 days.
+- A maker may post at most one Challenge Room update per simulated day.
 - Three leaderboards exist: **Highest Stakes**, **Most Watched**, and **Most Interesting**.
 - Any unresolved default removes all of a creator’s pacts from leaderboards.
 - A default does **not** block creating, discovering, or challenging.
@@ -58,7 +60,6 @@ engine/      state machine, discovery, defaults, leaderboards
 mock/        concrete V0 story and fixture data
 components/  interactive product experience
 app/         five routable pages
-mock/        deterministic stage presets for the clickable demo map
 docs/        decisions, invariants, scenario, and open questions
 ```
 
