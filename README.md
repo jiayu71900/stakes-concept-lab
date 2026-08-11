@@ -47,9 +47,10 @@ shipping information.
 
 A visitor chooses one display name the first time they publish or challenge.
 That name remains attached to every later action. After an outcome, publishing
-and challenging continue directly as the same identity: a default carries its
-real unresolved marks forward, while paying up leaves the mark count unchanged.
-The interface never offers a second identity or a rename path.
+and challenging continue under that visitor's own name, with actions labelled
+as a marked or unmarked user. A default carries its unresolved marks forward;
+paying up leaves the visitor unmarked. The interface never asks the visitor to
+roleplay another creator, choose a second identity, or rename themselves.
 
 The separate **Build With Us Lab** turns unresolved system questions into
 contribution paths. It is the collaborator funnel, not a fictional team page.

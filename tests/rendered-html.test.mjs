@@ -66,8 +66,12 @@ test("renders the consequence path and both join affordances without simulation 
   const [challenge, outcome, profile, lab] = pages;
   assert.match(challenge, /BET THEY WON’T/);
   assert.match(outcome, /LET 72H EXPIRE/);
-  assert.match(profile, /PUBLISH AS[\s\S]*?JIAYU/);
-  assert.match(profile, /CHALLENGE AS[\s\S]*?JIAYU/);
+  assert.match(profile, /PUBLISH AS[\s\S]*?A MARKED USER/);
+  assert.match(profile, /CHALLENGE AS[\s\S]*?A MARKED USER/);
+  const source = await readFile(new URL("../components/DemoApp.tsx", import.meta.url), "utf8");
+  assert.match(source, /CONTINUE AS A MARKED USER/);
+  assert.match(source, /CONTINUE AS AN UNMARKED USER/);
+  assert.doesNotMatch(source, /PUBLISH AS \{user\.displayName\.toUpperCase\(\)\}|CHALLENGE AS \{user\.displayName\.toUpperCase\(\)\}/);
   assert.match(profile, /CLEANING RULE/);
   assert.match(profile, /FOUND A LOOPHOLE/);
   assert.match(lab, /HOW TO JOIN/);
