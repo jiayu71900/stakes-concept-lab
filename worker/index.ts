@@ -1,8 +1,11 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { handleVisitorArchiveRequest } from "./visitorArchiveApi";
+import type { D1Database } from "../db/visitorArchive";
 
 interface Env {
+  DB?: D1Database;
   ASSETS: { fetch(request: Request): Promise<Response> };
   IMAGES: {
     input(stream: ReadableStream): {
@@ -37,6 +40,10 @@ const worker = {
           return result.response();
         },
       }, allowedWidths);
+    }
+
+    if (url.pathname === "/api/visitor-challenges" || url.pathname === "/api/visitor-messages") {
+      return handleVisitorArchiveRequest(request, env.DB);
     }
 
     return handler.fetch(request, env, ctx);

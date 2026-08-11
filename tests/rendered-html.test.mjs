@@ -30,14 +30,24 @@ test("all five core pages, collaboration lab, and public teaser render", async (
   }
 });
 
-test("public teaser reveals the emotional arc without publishing hidden mechanics", async () => {
+test("public teaser stays within three pages and ends with a demo-linked challenge ticket", async () => {
   const response = await render("/preview");
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /PLAY THE 30-SECOND TICKET/);
-  assert.match(html, /REQUEST A WALKTHROUGH/);
-  assert.match(html, /Bring one sharp question/);
+  assert.match(html, /Preview page 1 of 3/);
+  assert.match(html, /MAKE A CHALLENGE TICKET/);
   assert.doesNotMatch(html, /cleaning|highest stakes|ranking weight|default \+10/i);
+  const source = await readFile(new URL("../components/PublicPreview.tsx", import.meta.url), "utf8");
+  assert.match(source, /generated-ticket[\s\S]*?href=\{DEMO_URL\}/);
+  assert.match(source, /Open the full playable BET I DO demo/);
+});
+
+test("visitor archive is an inviting, explicit choice", async () => {
+  const source = await readFile(new URL("../components/DemoApp.tsx", import.meta.url), "utf8");
+  assert.match(source, /Would you like future visitors to discover your challenge\?/);
+  assert.match(source, /LET MY STORY TRAVEL/);
+  assert.match(source, /KEEP THIS SESSION ONLY/);
+  assert.match(source, /never your real name, contact details, address, payment, or shipping information/);
 });
 
 test("renders the consequence path and both join affordances without simulation copy", async () => {

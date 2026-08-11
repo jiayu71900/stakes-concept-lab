@@ -12,8 +12,10 @@
   },
   "include": [
     "domain/**/*.ts",
+    "db/**/*.ts",
     "engine/**/*.ts",
     "mock/demoData.ts",
+    "worker/visitorArchiveApi.ts",
     "tests/engine-rules.test.ts"
   ]
 }

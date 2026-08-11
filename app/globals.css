@@ -285,6 +285,7 @@ button { color: inherit; }
 .empty-feed { margin: 35px 10px; font: italic 15px Georgia, serif; color: rgba(255,255,255,.75); }
 .message-composer { padding: 18px; border-top: 2px solid var(--ink); background: #4257df; }
 .message-composer label { display: block; margin-bottom: 8px; font: 900 8px Arial, sans-serif; letter-spacing: .12em; }
+.archive-message-notice { margin: 0 0 10px; padding: 9px 10px; border: 1px solid rgba(255,255,255,.55); background: rgba(255,255,255,.1); color: rgba(255,255,255,.9); font: 700 9px/1.4 Arial, sans-serif; letter-spacing: .04em; }
 .message-composer textarea { width: 100%; min-height: 88px; padding: 12px; border: 1.5px solid var(--ink); background: var(--white); color: var(--ink); resize: vertical; }
 .message-composer textarea:disabled { opacity: .68; }
 .message-composer > div { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
@@ -388,8 +389,20 @@ button { color: inherit; }
 .create-modal input, .create-modal textarea { border: 1.5px solid var(--ink); background: var(--white); padding: 13px 14px; font-size: 14px; border-radius: 0; color: var(--ink); }
 .create-modal textarea { min-height: 75px; resize: vertical; }
 .form-split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.create-rule { margin-top: 20px; padding: 12px 14px; border: 1px solid var(--ink); background: var(--yellow); font-size: 12px; }
+.create-rule { margin-top: 20px; padding: 12px 14px; border: 1px solid var(--ink); background: var(--yellow); font-size: 12px; display: flex; align-items: flex-start; }
 .create-rule span { font-weight: 900; margin-right: 10px; }
+.create-rule div { display: flex; flex-direction: column; gap: 4px; }
+.create-rule small { color: var(--muted); font-size: 9px; line-height: 1.35; }
+.archive-invitation { margin-top: 14px; padding: 18px; border: 1.5px solid var(--ink); background: linear-gradient(135deg, var(--white) 0 72%, var(--acid) 72% 100%); box-shadow: 4px 4px 0 var(--ink); }
+.archive-spark { display: inline-block; padding: 4px 7px; background: var(--blue); color: white; font: 900 8px Arial, sans-serif; letter-spacing: .14em; transform: rotate(-1deg); }
+.archive-invitation h3 { margin: 10px 0 7px; max-width: 520px; font: 900 21px/1.05 Arial Black, Arial, sans-serif; letter-spacing: -.035em; text-transform: uppercase; }
+.archive-invitation p { margin: 0; max-width: 520px; font: 15px/1.4 Georgia, serif; }
+.archive-invitation > small { display: block; margin-top: 9px; max-width: 520px; color: var(--muted); font: 10px/1.4 Arial, sans-serif; }
+.archive-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; }
+.archive-choice button { min-height: 58px; padding: 9px 11px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; text-align: left; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.archive-choice button b { font: 900 11px Arial Black, Arial, sans-serif; letter-spacing: .06em; }
+.archive-choice button span { font: 800 8px Arial, sans-serif; letter-spacing: .08em; }
+.archive-choice button.selected { background: var(--acid); box-shadow: 3px 3px 0 var(--ink); transform: translate(-1px,-1px); }
 .duration-picker { border: 0; padding: 0; margin: 20px 0 0; }
 .duration-picker legend { font: 900 9px Arial, sans-serif; letter-spacing: .12em; margin-bottom: 8px; }
 .duration-picker > div { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
@@ -581,6 +594,8 @@ button { color: inherit; }
   .duration-picker > div { grid-template-columns: repeat(5, minmax(0,1fr)); }
   .duration-picker button { min-height: 49px; font-size: 14px; padding: 0; }
   .create-modal { padding: 27px 22px; }
+  .archive-invitation { background: var(--white); }
+  .archive-choice { grid-template-columns: 1fr; }
   .footer { align-items: flex-start; gap: 20px; }
   .lab-page { padding-top: 50px; }
   .lab-hero h1 { font-size: 58px; }

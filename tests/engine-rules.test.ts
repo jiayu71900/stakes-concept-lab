@@ -6,6 +6,7 @@ import { cleanseOneDefault, defaultMarksFor, recordDefault } from "../engine/def
 import { discoverNext } from "../engine/discoveryEngine.js";
 import { rankLeaderboard } from "../engine/leaderboardEngine.js";
 import { challengeMessages, challenges } from "../mock/demoData.js";
+import { normalizeChallengeInput, normalizeMessageInput } from "../worker/visitorArchiveApi.js";
 
 function user(id: string, unresolvedDefaults = 0): User {
   return {
@@ -127,6 +128,24 @@ test("every playable mock challenge has realistically spaced maker updates", () 
     assert.ok(updates.every((message) => message.day > 0 && message.day < item.durationDays));
     assert.deepEqual(updates.map((message) => message.day), updates.map((message) => message.day).toSorted((a, b) => a - b));
   }
+});
+
+test("visitor archive requires consent, accepts bounded content, and rejects links or invalid days", () => {
+  assert.deepEqual(normalizeChallengeInput({ title: "  Ship my public build  ", durationDays: 30, stakeName: "Nintendo Switch", firstMessage: "Scope locked.", archiveConsent: true }), {
+    title: "Ship my public build",
+    durationDays: 30,
+    stakeName: "Nintendo Switch",
+    firstMessage: "Scope locked.",
+  });
+  assert.equal(normalizeChallengeInput({ title: "Ship a build", durationDays: 30, stakeName: "Phone", archiveConsent: false }), null);
+  assert.equal(normalizeChallengeInput({ title: "Visit https://spam.example", durationDays: 30, stakeName: "Phone", archiveConsent: true }), null);
+  assert.equal(normalizeChallengeInput({ title: "Ship a build", durationDays: 365, stakeName: "Phone", archiveConsent: true }), null);
+  assert.deepEqual(normalizeMessageInput({ challengeId: "visitor-12345678", day: 5, body: "First rough build is live." }), {
+    challengeId: "visitor-12345678",
+    day: 5,
+    body: "First rough build is live.",
+  });
+  assert.equal(normalizeMessageInput({ challengeId: "visitor-12345678", day: 0, body: "Too early" }), null);
 });
 
 test("an unresolved default removes every pact by that maker from leaderboards", () => {

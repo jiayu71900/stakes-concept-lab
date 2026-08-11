@@ -38,6 +38,13 @@ The five core surfaces are:
 - **Outcome** — failure opens a direct-shipping window.
 - **Profile** — defaults remain visible without banning the person; the visitor can publish again as the marked identity.
 
+Visitors can also choose to let a challenge travel beyond their session. With
+explicit opt-in, its promise, duration, stake label, and room updates enter an
+anonymous visitor archive and may appear in future visitors’ random Discover
+pulls. Declining keeps the challenge in the current browser session only. The
+archive does not collect real names, contact details, addresses, payment, or
+shipping information.
+
 The separate **Build With Us Lab** turns unresolved system questions into
 contribution paths. It is the collaborator funnel, not a fictional team page.
 
@@ -71,7 +78,7 @@ Start with something concrete. Continue where ownership makes sense. See
 UI routes + components
         → Domain objects
         → Pure rule engines
-        → Mock scenario data / local experience state
+        → Mock scenarios / local state / opt-in visitor archive
 ```
 
 The interface consumes engine results; it does not own ranking, default,
@@ -82,6 +89,8 @@ changing product pages.
 domain/      Challenge, User, Stake, Default, Leaderboard, Discovery
 engine/      state machine, discovery, defaults, leaderboards
 mock/        concrete story and fixture data
+db/          anonymous visitor archive schema and repository
+worker/      bounded archive endpoints beside the rendered experience
 components/  interactive product experience
 app/         five routable pages plus the collaboration lab
 docs/        decisions, invariants, scenario, and open questions

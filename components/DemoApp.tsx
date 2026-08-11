@@ -8,6 +8,7 @@ import { deterministicDiscovery } from "@/engine/discoveryEngine";
 import { advanceThrough, transitionChallenge } from "@/engine/challengeStateMachine";
 import { recordDefault } from "@/engine/defaultEngine";
 import { rankLeaderboard } from "@/engine/leaderboardEngine";
+import { loadVisitorArchive, saveVisitorChallenge, saveVisitorMessage } from "@/lib/visitorArchiveClient";
 
 type DemoView = "discover" | "challenge" | "match" | "outcome" | "profile" | "lab";
 const STORAGE_KEY = "bet-i-do-demo-v4";
@@ -50,8 +51,8 @@ function money(value: number) {
   }).format(value);
 }
 
-function creatorFor(challenge: Challenge) {
-  return creators.find((creator) => creator.id === challenge.creatorId) ?? creators[0];
+function creatorFor(challenge: Challenge, pool: User[] = creators) {
+  return pool.find((creator) => creator.id === challenge.creatorId) ?? creators[0];
 }
 
 function createStateForView(view: DemoView): DemoState {
@@ -107,6 +108,9 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   const [createIdentityId, setCreateIdentityId] = useState("you");
   const [publisherMode, setPublisherMode] = useState(false);
   const [profileIdentityId, setProfileIdentityId] = useState<string | null>(null);
+  const [visitorChallenges, setVisitorChallenges] = useState<Challenge[]>([]);
+  const [visitorCreators, setVisitorCreators] = useState<User[]>([]);
+  const [archiveSaved, setArchiveSaved] = useState(false);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -127,6 +131,20 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    loadVisitorArchive().then((archive) => {
+      if (cancelled) return;
+      setVisitorChallenges(archive.challenges);
+      setVisitorCreators(archive.creators);
+      setState((current) => {
+        const messageIds = new Set(current.messages.map((message) => message.id));
+        return { ...current, messages: [...current.messages, ...archive.messages.filter((message) => !messageIds.has(message.id))] };
+      });
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
     if (hydrated) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [hydrated, state]);
 
@@ -142,21 +160,24 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const currentDiscovery = challenges[state.discoveryIndex] ?? challenges[0];
+  const availableChallenges = useMemo(() => [...challenges, ...visitorChallenges], [visitorChallenges]);
+  const availableCreators = useMemo(() => [...creators, ...visitorCreators], [visitorCreators]);
+  const currentDiscovery = availableChallenges[state.discoveryIndex] ?? availableChallenges[0];
+  const findCreator = (challenge: Challenge) => creatorFor(challenge, availableCreators);
   const leaderboards = useMemo(() => {
-    const allUsers = creators.map((creator) => creator.id === state.creator.id ? state.creator : creator);
+    const allUsers = availableCreators.map((creator) => creator.id === state.creator.id ? state.creator : creator);
     return (["highest_stakes", "most_watched", "most_interesting"] as const).map((board) => ({
       board,
-      entries: rankLeaderboard(challenges, allUsers, board).slice(0, 3),
+      entries: rankLeaderboard(availableChallenges, allUsers, board).slice(0, 3),
     }));
-  }, [state.creator]);
+  }, [availableChallenges, availableCreators, state.creator]);
 
   const openChallenge = (challenge: Challenge) => {
     setPublisherMode(false);
     setState((current) => ({
       ...current,
       featured: structuredClone(challenge),
-      creator: { ...creatorFor(challenge) },
+      creator: { ...findCreator(challenge) },
       joined: false,
       simulatedDay: 0,
       lastEvent: current.lastEvent === "CREATED" ? "CREATED" : "READY",
@@ -166,7 +187,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
 
   const refreshDiscovery = () => {
     setState((current) => {
-      const next = deterministicDiscovery(challenges, current.discoveryIndex, current.viewer.refreshesRemaining);
+      const next = deterministicDiscovery(availableChallenges, current.discoveryIndex, current.viewer.refreshesRemaining);
       return {
         ...current,
         discoveryIndex: next.index,
@@ -175,22 +196,56 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     });
   };
 
-  const createChallenge = (durationDays: number, title: string) => {
+  const createChallenge = async (durationDays: number, title: string, stakeName: string, firstMessage: string, shareWithFutureVisitors: boolean) => {
     const identity = createIdentityId === state.creator.id ? state.creator : state.viewer;
-    const draft: Challenge = {
+    const localDraft: Challenge = {
       ...structuredClone(challenges[0]),
-      id: "your-first-bet",
-      slug: "your-first-bet",
+      id: `local-${Date.now()}`,
+      slug: "visitor-bet",
       creatorId: identity.id,
       title,
       state: "DRAFT",
       durationDays,
       daysRemaining: durationDays,
+      stake: {
+        ...structuredClone(challenges[0].stake),
+        id: `local-stake-${Date.now()}`,
+        itemName: stakeName,
+        estimatedValue: 0,
+        condition: "Declared by visitor",
+        ownershipVerified: false,
+        glyph: "VI",
+      },
       entrantCount: 0,
       watchers: 0,
     };
-    const opened = transitionChallenge(draft, "OPEN");
-    setState((current) => ({ ...current, creator: identity, featured: opened, joined: false, simulatedDay: 0, createdChallenge: true, lastEvent: "CREATED" }));
+    let opened = transitionChallenge(localDraft, "OPEN");
+    let publishedCreator = identity;
+    let archivedMessage = firstMessage.trim() ? { id: `local-message-${Date.now()}`, challengeId: opened.id, authorId: identity.id, day: 1, body: firstMessage.trim(), kind: "CREATOR_UPDATE" as const } : null;
+    setArchiveSaved(false);
+    if (shareWithFutureVisitors) {
+      try {
+        const archived = await saveVisitorChallenge({ title, durationDays, stakeName, firstMessage });
+        opened = archived.challenge;
+        publishedCreator = archived.creator;
+        archivedMessage = archived.message;
+        setVisitorChallenges((current) => [archived.challenge, ...current.filter((challenge) => challenge.id !== archived.challenge.id)]);
+        setVisitorCreators((current) => [archived.creator, ...current.filter((creator) => creator.id !== archived.creator.id)]);
+        setArchiveSaved(true);
+      } catch {
+        // The playable local path remains available when the archive is temporarily unavailable.
+      }
+    }
+    setState((current) => ({
+      ...current,
+      creator: publishedCreator,
+      featured: opened,
+      joined: false,
+      simulatedDay: 0,
+      messages: archivedMessage ? [...current.messages.filter((message) => message.id !== archivedMessage?.id), archivedMessage] : current.messages,
+      createdChallenge: true,
+      lastEvent: "CREATED",
+    }));
     setPublisherMode(true);
     setShowCreatedToast(true);
     setCreateOpen(false);
@@ -290,6 +345,9 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         }],
       };
     });
+    if (state.featured.id.startsWith("visitor-")) {
+      void saveVisitorMessage({ challengeId: state.featured.id, day: state.simulatedDay, body: text }).catch(() => undefined);
+    }
   };
 
   const simulateShipment = () => {
@@ -334,14 +392,14 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   const challengeAsProfile = (identity: User) => {
     setState((current) => {
       const base = createInitialDemoState();
-      const nextIndex = challenges.findIndex((challenge) => challenge.creatorId !== identity.id);
+      const nextIndex = availableChallenges.findIndex((challenge) => challenge.creatorId !== identity.id);
       const discoveryIndex = nextIndex >= 0 ? nextIndex : 0;
-      const nextChallenge = structuredClone(challenges[discoveryIndex]);
+      const nextChallenge = structuredClone(availableChallenges[discoveryIndex]);
       const seededMessageIds = new Set(base.messages.map((message) => message.id));
       return {
         ...base,
         viewer: { ...identity },
-        creator: { ...creatorFor(nextChallenge) },
+        creator: { ...findCreator(nextChallenge) },
         featured: nextChallenge,
         discoveryIndex,
         defaultRecords: current.defaultRecords,
@@ -383,7 +441,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
       {showCreatedToast && (
         <div className="event-toast" role="status">
           <button onClick={() => setShowCreatedToast(false)} aria-label="Dismiss notification">×</button>
-          <span>BET IS OPEN</span>Your bet is now waiting in the random pool.
+          <span>{archiveSaved ? "SAVED TO THE VISITOR ARCHIVE" : "BET IS OPEN"}</span>{archiveSaved ? "Future visitors can now discover this bet and its updates." : "Your bet is open in this local story."}
         </div>
       )}
 
@@ -591,6 +649,7 @@ function MatchPage({ state, onStart, onAdvance, onResolve, onPostMessage }: {
           {challenge.state === "ACTIVE" && (
             <form className="message-composer" onSubmit={(event) => { event.preventDefault(); onPostMessage(draft); setDraft(""); }}>
               <label htmlFor="daily-note">PLAY AS {state.creator.displayName.toUpperCase()} · DAY {state.simulatedDay}</label>
+              {challenge.id.startsWith("visitor-") && <p className="archive-message-notice">YOUR STORY CAN TRAVEL · This note may appear with your challenge when future visitors discover it.</p>}
               <textarea id="daily-note" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={state.simulatedDay < 1 || postedToday} maxLength={180} placeholder={state.simulatedDay < 1 ? "Start the clock first." : postedToday ? "Today’s note has already been posted." : "Leave today’s update…"} />
               <div><small>{draft.length}/180</small><button disabled={!draft.trim() || state.simulatedDay < 1 || postedToday}>POST TODAY’S NOTE</button></div>
             </form>
@@ -746,13 +805,33 @@ function LabPage({ copiedBrief, onCopy }: { copiedBrief: string | null; onCopy: 
   );
 }
 
-function CreateModal({ identity, onClose, onCreate }: { identity: User; onClose: () => void; onCreate: (durationDays: number, title: string) => void }) {
+function CreateModal({ identity, onClose, onCreate }: { identity: User; onClose: () => void; onCreate: (durationDays: number, title: string, stakeName: string, firstMessage: string, shareWithFutureVisitors: boolean) => Promise<void> }) {
   const [duration, setDuration] = useState(21);
   const [title, setTitle] = useState("Publish my first public build");
+  const [stakeName, setStakeName] = useState("Nintendo Switch");
+  const [firstMessage, setFirstMessage] = useState("Day one. Scope locked.");
+  const [archiveChoice, setArchiveChoice] = useState<boolean | null>(null);
+  const [saving, setSaving] = useState(false);
+  const handleCreate = async () => {
+    if (saving || archiveChoice === null || !title.trim() || !stakeName.trim()) return;
+    setSaving(true);
+    await onCreate(duration, title.trim(), stakeName.trim(), firstMessage.trim(), archiveChoice);
+  };
   return (
     <div className="modal-backdrop">
       <div className="create-modal" role="dialog" aria-modal="true" aria-labelledby="create-title">
-        <button className="modal-close" onClick={onClose} aria-label="Close create challenge dialog">×</button><p className="eyebrow">MAKE A BET</p><div className="identity-banner"><span>{identity.avatar}</span><div><small>PUBLISHING AS</small><strong>{identity.displayName}</strong></div>{identity.unresolvedDefaults > 0 && <b>{identity.unresolvedDefaults} MARK{identity.unresolvedDefaults === 1 ? "" : "S"}</b>}</div><h2 id="create-title">Put something you love behind something you mean.</h2><label>I BET I CAN<input value={title} onChange={(event) => setTitle(event.target.value)} /></label><fieldset className="duration-picker"><legend>HOW LONG DOES THIS BET RUN?</legend><div>{[7, 14, 21, 30, 60].map((days) => <button type="button" className={duration === days ? "selected" : ""} key={days} onClick={() => setDuration(days)}>{days}<small>DAYS</small></button>)}</div></fieldset><div className="form-split"><label>I’M PUTTING UP<input defaultValue="Nintendo Switch" /></label><label>FIRST ROOM NOTE<input defaultValue="Day one. Scope locked." /></label></div><label>WHAT COUNTS AS DONE?<textarea defaultValue="Public URL, working sign-in, and a timestamped release." /></label><div className="create-rule"><span>01</span> Once matched, the promise, duration, and proof contract lock.</div><button className="giant-action" disabled={!title.trim()} onClick={() => onCreate(duration, title.trim())}>OPEN {duration}-DAY BET <span>→</span></button>
+        <button className="modal-close" onClick={onClose} aria-label="Close create challenge dialog">×</button><p className="eyebrow">MAKE A BET</p><div className="identity-banner"><span>{identity.avatar}</span><div><small>PUBLISHING AS</small><strong>{identity.displayName}</strong></div>{identity.unresolvedDefaults > 0 && <b>{identity.unresolvedDefaults} MARK{identity.unresolvedDefaults === 1 ? "" : "S"}</b>}</div><h2 id="create-title">Put something you love behind something you mean.</h2><label>I BET I CAN<input value={title} maxLength={72} onChange={(event) => setTitle(event.target.value)} /></label><fieldset className="duration-picker"><legend>HOW LONG DOES THIS BET RUN?</legend><div>{[7, 14, 21, 30, 60].map((days) => <button type="button" className={duration === days ? "selected" : ""} key={days} onClick={() => setDuration(days)}>{days}<small>DAYS</small></button>)}</div></fieldset><div className="form-split"><label>I’M PUTTING UP<input value={stakeName} maxLength={48} onChange={(event) => setStakeName(event.target.value)} /></label><label>FIRST ROOM NOTE<input value={firstMessage} maxLength={180} onChange={(event) => setFirstMessage(event.target.value)} /></label></div><label>WHAT COUNTS AS DONE?<textarea defaultValue="Public URL, working sign-in, and a timestamped release." /></label><div className="create-rule"><span>01</span><div>Once matched, the promise, duration, and proof contract lock.</div></div>
+        <section className="archive-invitation" aria-labelledby="archive-invitation-title">
+          <span className="archive-spark">PASS IT ON</span>
+          <h3 id="archive-invitation-title">Would you like future visitors to discover your challenge?</h3>
+          <p>Let your promise become part of the world: people may pull it from Discover, follow your updates, and decide whether they would take you on.</p>
+          <small>Only the challenge and room notes are saved anonymously—never your real name, contact details, address, payment, or shipping information.</small>
+          <div className="archive-choice">
+            <button type="button" className={archiveChoice === true ? "selected" : ""} onClick={() => setArchiveChoice(true)}><b>YES</b><span>LET MY STORY TRAVEL</span></button>
+            <button type="button" className={archiveChoice === false ? "selected" : ""} onClick={() => setArchiveChoice(false)}><b>NOT YET</b><span>KEEP THIS SESSION ONLY</span></button>
+          </div>
+        </section>
+        <button className="giant-action" disabled={saving || archiveChoice === null || !title.trim() || !stakeName.trim()} onClick={handleCreate}>{saving ? archiveChoice ? "ADDING IT TO THE WORLD…" : "OPENING YOUR BET…" : `OPEN ${duration}-DAY BET`} <span>→</span></button>
       </div>
     </div>
   );
