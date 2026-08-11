@@ -903,6 +903,15 @@ function ProfilePage({ state, user, statusIdentityId, onPublishAs, onChallengeAs
         <div className="cleansing-panel rules-only"><p className="eyebrow">CLEANING RULE</p><h2>Repayment happens from the other side.</h2><ol><li><b>01</b><span>This user must later be drawn as someone else’s challenger.</span></li><li><b>02</b><span>That maker must fail and default on this user.</span></li><li><b>03</b><span>One unresolved mark is then cleared. A +10 mark takes ten qualifying defaults.</span></li></ol><p>Marks never fall below zero. Historical defaults remain visible after cleaning.</p></div>
       </section>
       <section className="ledger"><div><span>{user.historicalDefaults}</span><small>historical defaults</small></div><div><span>{user.defaultsReceived}</span><small>defaults received</small></div><div><span>{user.unresolvedDefaults}</span><small>unresolved marks now</small></div></section>
+      <section className="experience-feedback" aria-labelledby="experience-feedback-title">
+        <div className="feedback-heading"><div><p className="eyebrow">YOU REACHED THE END OF V0.1</p><h2 id="experience-feedback-title">What stayed with you?</h2></div><p>You have seen the promise, the match, the failure, and the mark. One honest reaction from {user.displayName} is more useful than a long survey.</p></div>
+        <div className="feedback-grid">
+          <a href={DISCUSSION_URLS.firstImpressions} target="_blank" rel="noreferrer"><span>01 · THE MOMENT</span><strong>Where did it click?</strong><p>Tell us the exact screen or consequence that made the idea feel real.</p><b>LEAVE A FIRST IMPRESSION ↗</b></a>
+          <a href={DISCUSSION_URLS.breakRule} target="_blank" rel="noreferrer"><span>02 · THE RULE</span><strong>What still feels unclear?</strong><p>Point at one confusing rule, loophole, or consequence you do not believe yet.</p><b>BREAK A RULE ↗</b></a>
+          <a href={DISCUSSION_URLS.shapeSystem} target="_blank" rel="noreferrer"><span>03 · THE EDGE</span><strong>What would you shape?</strong><p>Choose design, engineering, trust, or community—and name the edge you want to own.</p><b>JOIN THE BUILD ↗</b></a>
+        </div>
+        <div className="feedback-close"><span>NOT READY TO WRITE?</span><p>Open the Build With Us Lab, inspect the four unresolved system questions, and return when one starts bothering you.</p><a href="/lab">EXPLORE OPEN EDGES →</a></div>
+      </section>
     </div>
   );
 }

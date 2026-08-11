@@ -404,6 +404,26 @@ button { color: inherit; }
 .ledger div { background: var(--paper); padding: 22px; display: flex; flex-direction: column; }
 .ledger span { font: 900 32px Arial Black, Arial, sans-serif; }
 .ledger small { text-transform: uppercase; font-size: 9px; letter-spacing: .12em; margin-top: 3px; }
+.experience-feedback { margin-top: 72px; border: 2px solid var(--ink); background: var(--white); box-shadow: 9px 9px 0 var(--blue); }
+.feedback-heading { min-height: 180px; padding: 30px 32px; background: var(--ink); color: var(--white); display: grid; grid-template-columns: 1.25fr .75fr; gap: 40px; align-items: end; }
+.feedback-heading .eyebrow { color: var(--acid); }
+.feedback-heading h2 { max-width: 720px; margin: 0; font: 900 clamp(42px, 6vw, 76px)/.87 Arial Black, Arial, sans-serif; letter-spacing: -.07em; text-transform: uppercase; }
+.feedback-heading > p { max-width: 420px; margin: 0; color: #c9c6bd; font: italic 15px/1.55 Georgia, serif; }
+.feedback-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+.feedback-grid > a { min-height: 305px; padding: 25px; border-top: 2px solid var(--ink); color: var(--ink); text-decoration: none; display: flex; flex-direction: column; transition: transform .15s ease, box-shadow .15s ease; }
+.feedback-grid > a + a { border-left: 2px solid var(--ink); }
+.feedback-grid > a:nth-child(1) { background: var(--acid); }
+.feedback-grid > a:nth-child(2) { background: var(--yellow); }
+.feedback-grid > a:nth-child(3) { background: var(--coral); }
+.feedback-grid > a:hover { position: relative; z-index: 2; transform: translate(-4px,-4px); box-shadow: 7px 7px 0 var(--ink); }
+.feedback-grid span { font: 900 9px Arial, sans-serif; letter-spacing: .13em; }
+.feedback-grid strong { margin-top: 54px; font: 900 clamp(28px, 3.3vw, 42px)/.94 Arial Black, Arial, sans-serif; letter-spacing: -.055em; text-transform: uppercase; }
+.feedback-grid p { max-width: 330px; margin: 14px 0 30px; font-size: 13px; line-height: 1.48; }
+.feedback-grid b { margin-top: auto; font-size: 9px; letter-spacing: .1em; }
+.feedback-close { min-height: 82px; padding: 17px 22px; border-top: 2px solid var(--ink); display: grid; grid-template-columns: 180px 1fr auto; gap: 22px; align-items: center; }
+.feedback-close > span { font: 900 9px Arial, sans-serif; letter-spacing: .13em; }
+.feedback-close p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.feedback-close a { min-height: 42px; padding: 0 14px; border: 1.5px solid var(--ink); background: var(--ink); color: var(--white); text-decoration: none; display: grid; place-items: center; font: 900 9px Arial, sans-serif; letter-spacing: .1em; }
 
 .event-toast { position: fixed; top: 145px; right: 28px; z-index: 30; width: min(380px, calc(100vw - 40px)); background: var(--acid); border: 2px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 15px 18px; font-size: 13px; animation: toast-in .35s ease both; }
 .event-toast span { display: block; font: 900 9px Arial, sans-serif; letter-spacing: .13em; margin-bottom: 5px; }
@@ -552,6 +572,11 @@ button { color: inherit; }
   .settlement-ledger { grid-template-columns: 1fr; }
   .profile-head { grid-template-columns: 100px 1fr; }
   .default-counter { grid-column: 1 / -1; width: fit-content; }
+  .feedback-heading { grid-template-columns: 1fr; gap: 24px; align-items: start; }
+  .feedback-grid { grid-template-columns: 1fr; }
+  .feedback-grid > a { min-height: 240px; }
+  .feedback-grid > a + a { border-left: 0; }
+  .feedback-close { grid-template-columns: 1fr; }
   .publisher-next { grid-template-columns: 1fr; }
   .publisher-next .giant-action { width: 100%; }
   .team-model { grid-template-columns: 1fr; }
@@ -635,6 +660,11 @@ button { color: inherit; }
   .zero-change { font-size: 35px; }
   .ledger div { padding: 16px 10px; }
   .ledger span { font-size: 24px; }
+  .experience-feedback { margin-top: 55px; box-shadow: 6px 6px 0 var(--blue); }
+  .feedback-heading { padding: 25px; }
+  .feedback-heading h2 { font-size: 43px; }
+  .feedback-grid > a { min-height: 220px; padding: 22px; }
+  .feedback-grid strong { margin-top: 35px; font-size: 32px; }
   .form-split { grid-template-columns: 1fr; gap: 0; }
   .duration-picker > div { grid-template-columns: repeat(5, minmax(0,1fr)); }
   .duration-picker button { min-height: 49px; font-size: 14px; padding: 0; }

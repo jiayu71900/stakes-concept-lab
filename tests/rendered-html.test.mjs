@@ -92,6 +92,11 @@ test("renders the consequence path and both join affordances without simulation 
   assert.doesNotMatch(source, /PUBLISH AS \{user\.displayName\.toUpperCase\(\)\}|CHALLENGE AS \{user\.displayName\.toUpperCase\(\)\}/);
   assert.match(profile, /CLEANING RULE/);
   assert.match(profile, /FOUND A LOOPHOLE/);
+  assert.match(profile, /YOU REACHED THE END OF V0\.1/);
+  assert.match(profile, /WHERE DID IT CLICK/i);
+  assert.match(profile, /WHAT STILL FEELS UNCLEAR/i);
+  assert.match(profile, /WHAT WOULD YOU SHAPE/i);
+  assert.match(profile, /EXPLORE OPEN EDGES/);
   assert.match(lab, /HOW TO JOIN/);
   assert.match(lab, /Shape the system/);
   assert.match(lab, /github\.com\/jiayu71900\/stakes-concept-lab\/discussions/);
