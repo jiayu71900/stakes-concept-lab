@@ -40,6 +40,11 @@ test("public teaser stays within three pages and ends with a demo-linked challen
   const source = await readFile(new URL("../components/PublicPreview.tsx", import.meta.url), "utf8");
   assert.match(source, /generated-ticket[\s\S]*?href=\{DEMO_URL\}/);
   assert.match(source, /Open the full playable BET I DO demo/);
+  assert.match(source, /PERSONAL CHALLENGE TICKET/);
+  assert.match(source, /COPY CHALLENGE/);
+  assert.match(source, /SHARE TICKET/);
+  assert.match(source, /navigator\.share/);
+  assert.match(source, /ticket-barcode/);
 });
 
 test("visitor archive is an inviting, explicit choice", async () => {

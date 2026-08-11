@@ -17,7 +17,27 @@ export function PublicPreview() {
   const [promise, setPromise] = useState("Ship my first public build");
   const [stake, setStake] = useState("Nintendo Switch");
   const [duration, setDuration] = useState(30);
+  const [shareStatus, setShareStatus] = useState("");
   const number = useMemo(() => ticketNumber(promise, stake, duration), [promise, stake, duration]);
+  const ticketText = `BET I DO.\n\nI bet I can ${promise.trim()} in ${duration} days.\nPhysical stake: ${stake.trim()}\n\nTake the other side: ${DEMO_URL}`;
+
+  const copyTicket = async () => {
+    await navigator.clipboard.writeText(ticketText);
+    setShareStatus("CHALLENGE COPIED · SEND IT TO SOMEONE WHO DOUBTS YOU");
+  };
+
+  const shareTicket = async () => {
+    if (!navigator.share) {
+      await copyTicket();
+      return;
+    }
+    try {
+      await navigator.share({ title: `I bet I can ${promise.trim()}`, text: ticketText, url: DEMO_URL });
+      setShareStatus("TICKET SHARED · NOW SEE WHO TAKES THE OTHER SIDE");
+    } catch (error) {
+      if (!(error instanceof DOMException) || error.name !== "AbortError") setShareStatus("SHARING PAUSED · COPY THE CHALLENGE INSTEAD");
+    }
+  };
 
   return (
     <main className={`teaser-shell teaser-page-${page + 1}`}>
@@ -66,14 +86,15 @@ export function PublicPreview() {
             <div className="teaser-result-heading"><p className="teaser-eyebrow">PAGE 03 · YOUR CHALLENGE TICKET</p><h1>Now make it<br /><em>feel real.</em></h1><p>Click anywhere on the ticket to enter the playable Demo.</p></div>
             <a className="generated-ticket" href={DEMO_URL} aria-label="Open the full playable BET I DO demo">
               <div className="generated-ticket-main">
-                <div className="generated-ticket-meta"><span>BET / {number}</span><b>OPEN</b></div>
+                <div className="ticket-brandline"><strong>BET I DO<span>.</span></strong><small>PERSONAL CHALLENGE TICKET</small></div>
+                <div className="generated-ticket-meta"><span>BET / {number}</span><span>ISSUED TO · THE PERSON READING THIS</span><b>OPEN</b></div>
                 <div className="generated-ticket-promise"><small>I BET I CAN</small><strong>{promise.trim()}.</strong></div>
                 <div className="generated-ticket-details"><span><small>TIME</small><b>{duration} DAYS</b></span><span><small>PHYSICAL STAKE</small><b>{stake.trim()}</b></span></div>
-                <div className="generated-ticket-rule">FINISH · KEEP IT&nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp;FAIL · SHIP IT</div>
+                <div className="ticket-bottomline"><div className="ticket-barcode" aria-hidden="true" /><span>FINISH · KEEP IT<br />FAIL · SHIP IT</span><small>VALID FOR ONE<br />PLAYABLE STORY</small></div>
               </div>
-              <div className="generated-ticket-stub"><span>BET<br />AGAINST<br />ME</span><i>OPEN THE<br />PLAYABLE DEMO<b>↗</b></i><small>0{page + 1} / 03</small></div>
+              <div className="generated-ticket-stub"><small>ADMIT ONE<br />CHALLENGER</small><span>BET<br />AGAINST<br />ME</span><i>OPEN THE<br />PLAYABLE DEMO<b>→</b></i><div className="stub-number">NO. {number}<br />0{page + 1} / 03</div></div>
             </a>
-            <div className="teaser-result-actions"><button onClick={() => setPage(1)}>← EDIT TICKET</button><a href={DEMO_URL}>ENTER DEMO →</a></div>
+            <div className="teaser-result-actions"><button onClick={() => { setShareStatus(""); setPage(1); }}>← EDIT TICKET</button><div className="ticket-share-actions"><button onClick={copyTicket}>COPY CHALLENGE</button><button onClick={shareTicket}>SHARE TICKET ↗</button><a href={DEMO_URL}>ENTER DEMO →</a></div>{shareStatus && <p role="status">{shareStatus}</p>}</div>
           </div>
         )}
       </section>
