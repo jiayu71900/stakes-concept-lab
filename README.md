@@ -45,10 +45,11 @@ pulls. Declining keeps the challenge in the current browser session only. The
 archive does not collect real names, contact details, addresses, payment, or
 shipping information.
 
-Publishing and challenging both begin with an identity choice. A visitor may
-continue the identity produced by the previous outcome or enter under a new
-display name with zero marks. The interface never invents a marked role: an
-unresolved mark exists only after the maker actually defaults.
+A visitor chooses one display name the first time they publish or challenge.
+That name remains attached to every later action. After an outcome, publishing
+and challenging continue directly as the same identity: a default carries its
+real unresolved marks forward, while paying up leaves the mark count unchanged.
+The interface never offers a second identity or a rename path.
 
 The separate **Build With Us Lab** turns unresolved system questions into
 contribution paths. It is the collaborator funnel, not a fictional team page.

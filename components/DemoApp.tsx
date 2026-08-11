@@ -11,8 +11,9 @@ import { rankLeaderboard } from "@/engine/leaderboardEngine";
 import { loadVisitorArchive, saveVisitorChallenge, saveVisitorChallengerNote, saveVisitorMessage } from "@/lib/visitorArchiveClient";
 
 type DemoView = "discover" | "challenge" | "match" | "outcome" | "profile" | "lab";
-type IdentityIntent = "publish" | "challenge" | "join";
+type IdentityIntent = "publish" | "join";
 const STORAGE_KEY = "bet-i-do-demo-v5";
+const VISITOR_IDENTITY_KEY = "bet-i-do-visitor-identity-v1";
 const REPOSITORY_URL = "https://github.com/jiayu71900/stakes-concept-lab";
 const DISCUSSION_URLS = {
   firstImpressions: `${REPOSITORY_URL}/discussions/new?category=first-impressions`,
@@ -123,7 +124,8 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   const [showCreatedToast, setShowCreatedToast] = useState(false);
   const [copiedBrief, setCopiedBrief] = useState<string | null>(null);
   const [createIdentity, setCreateIdentity] = useState<User | null>(null);
-  const [identityChoice, setIdentityChoice] = useState<{ intent: IdentityIntent; previous: User } | null>(null);
+  const [visitorIdentity, setVisitorIdentity] = useState<User | null>(null);
+  const [nameRequest, setNameRequest] = useState<{ intent: IdentityIntent } | null>(null);
   const [publisherMode, setPublisherMode] = useState(false);
   const [profileIdentityId, setProfileIdentityId] = useState<string | null>(null);
   const [visitorChallenges, setVisitorChallenges] = useState<Challenge[]>([]);
@@ -133,12 +135,30 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   useEffect(() => {
     queueMicrotask(() => {
       const saved = window.localStorage.getItem(STORAGE_KEY);
+      const savedVisitorIdentity = window.localStorage.getItem(VISITOR_IDENTITY_KEY);
+      let knownVisitor: User | null = null;
+      if (savedVisitorIdentity) {
+        try {
+          knownVisitor = JSON.parse(savedVisitorIdentity) as User;
+          setVisitorIdentity(knownVisitor);
+        } catch {
+          window.localStorage.removeItem(VISITOR_IDENTITY_KEY);
+        }
+      }
       if (saved) {
         try {
-          setState(JSON.parse(saved) as DemoState);
+          const restored = JSON.parse(saved) as DemoState;
+          setState(restored);
+          if (!knownVisitor && restored.viewer.id.startsWith("visitor-player-")) {
+            knownVisitor = restored.viewer;
+            setVisitorIdentity(restored.viewer);
+            window.localStorage.setItem(VISITOR_IDENTITY_KEY, JSON.stringify(restored.viewer));
+          }
         } catch {
           window.localStorage.removeItem(STORAGE_KEY);
         }
+      } else if (knownVisitor) {
+        setState((current) => ({ ...current, viewer: { ...knownVisitor, refreshesRemaining: current.viewer.refreshesRemaining } }));
       }
       setView(pathToView(window.location.pathname));
       setHydrated(true);
@@ -436,7 +456,9 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
 
   const resetDemo = () => {
     window.localStorage.removeItem(STORAGE_KEY);
-    setState(createInitialDemoState());
+    const reset = createInitialDemoState();
+    setState(visitorIdentity ? { ...reset, viewer: { ...visitorIdentity, refreshesRemaining: reset.viewer.refreshesRemaining } } : reset);
+    setCreateIdentity(null);
     setShowCreatedToast(false);
     navigate("discover");
   };
@@ -464,17 +486,29 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   };
 
   const continueWithIdentity = (identity: User, intent: IdentityIntent) => {
-    setIdentityChoice(null);
+    setNameRequest(null);
     if (intent === "publish") {
       setCreateIdentity(identity);
       setCreateOpen(true);
       return;
     }
-    if (intent === "join") {
-      joinChallenge(identity);
+    joinChallenge(identity);
+  };
+
+  const requestVisitorIdentity = (intent: IdentityIntent) => {
+    const identity = state.viewer.id === "you" ? visitorIdentity : state.viewer;
+    if (identity) {
+      continueWithIdentity(identity, intent);
       return;
     }
-    challengeAsProfile(identity);
+    setNameRequest({ intent });
+  };
+
+  const saveFirstVisitorName = (displayName: string) => {
+    const identity = namedVisitor(displayName);
+    window.localStorage.setItem(VISITOR_IDENTITY_KEY, JSON.stringify(identity));
+    setVisitorIdentity(identity);
+    continueWithIdentity(identity, nameRequest?.intent ?? "join");
   };
 
   const openProfile = (identityId: string) => {
@@ -498,7 +532,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         <nav className="nav-links" aria-label="Primary navigation">
           <button className={view === "discover" ? "active" : ""} onClick={() => navigate("discover")}>Discover</button>
           <button className={view === "lab" ? "active" : ""} onClick={() => navigate("lab")}>Build with us</button>
-          <button className="make-button" onClick={() => setIdentityChoice({ intent: "publish", previous: state.viewer })}>+ Make a bet</button>
+          <button className="make-button" onClick={() => requestVisitorIdentity("publish")}>+ Make a bet</button>
         </nav>
       </header>
 
@@ -515,11 +549,11 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         <DiscoverPage challenge={currentDiscovery} refreshes={state.viewer.refreshesRemaining} leaderboards={leaderboards} onRefresh={refreshDiscovery} onOpen={openChallenge} />
       )}
       {view === "challenge" && (
-        publisherMode ? <PublisherChallengePage challenge={state.featured} creator={state.creator} onViewPublic={() => setPublisherMode(false)} /> : <ChallengePage challenge={state.featured} creatorName={state.creator.displayName} joined={state.joined} onJoin={() => setIdentityChoice({ intent: "join", previous: state.viewer })} onSelect={simulateSelection} />
+        publisherMode ? <PublisherChallengePage challenge={state.featured} creator={state.creator} onViewPublic={() => setPublisherMode(false)} /> : <ChallengePage challenge={state.featured} creatorName={state.creator.displayName} joined={state.joined} canJoin={state.viewer.id !== state.creator.id} onJoin={() => requestVisitorIdentity("join")} onSelect={simulateSelection} />
       )}
       {view === "match" && <MatchPage state={state} onStart={startChallenge} onAdvance={advanceDays} onResolve={resolveChallenge} onPostMessage={postDailyMessage} onPostChallengerNote={postChallengerNote} />}
       {view === "outcome" && <OutcomePage state={state} onDefault={simulateDefault} onShip={simulateShipment} onProfile={openProfile} />}
-      {view === "profile" && <ProfilePage state={state} user={profileIdentity} onPublishAs={(identity) => setIdentityChoice({ intent: "publish", previous: identity })} onChallengeAs={(identity) => setIdentityChoice({ intent: "challenge", previous: identity })} />}
+      {view === "profile" && <ProfilePage state={state} user={profileIdentity} onPublishAs={(identity) => { setCreateIdentity(identity); setCreateOpen(true); }} onChallengeAs={challengeAsProfile} />}
       {view === "lab" && <LabPage copiedBrief={copiedBrief} onCopy={copyBrief} />}
 
       <footer className="footer">
@@ -527,7 +561,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         <button onClick={() => navigate("lab")}>Build with us →</button>
       </footer>
 
-      {identityChoice && <IdentityChoiceModal previous={identityChoice.previous} previousAvailable={identityChoice.intent !== "join" || identityChoice.previous.id !== state.creator.id} intent={identityChoice.intent} onClose={() => setIdentityChoice(null)} onChoose={(identity) => continueWithIdentity(identity, identityChoice.intent)} />}
+      {nameRequest && <NameEntryModal intent={nameRequest.intent} onClose={() => setNameRequest(null)} onChoose={saveFirstVisitorName} />}
       {createOpen && <CreateModal identity={createIdentity ?? state.viewer} onClose={() => setCreateOpen(false)} onCreate={createChallenge} />}
     </main>
   );
@@ -625,7 +659,7 @@ function PublisherChallengePage({ challenge, creator, onViewPublic }: { challeng
   );
 }
 
-function ChallengePage({ challenge, creatorName, joined, onJoin, onSelect }: { challenge: Challenge; creatorName: string; joined: boolean; onJoin: () => void; onSelect: () => void }) {
+function ChallengePage({ challenge, creatorName, joined, canJoin, onJoin, onSelect }: { challenge: Challenge; creatorName: string; joined: boolean; canJoin: boolean; onJoin: () => void; onSelect: () => void }) {
   return (
     <div className="page-wrap detail-page">
       <div className="detail-head"><p className="eyebrow">THE BET · ENTRY OPEN</p><h1>{creatorName} put<br />something real on it.</h1></div>
@@ -640,9 +674,10 @@ function ChallengePage({ challenge, creatorName, joined, onJoin, onSelect }: { c
           <StakeObject challenge={challenge} /><blockquote>“{challenge.stake.significance}”</blockquote><div className="verified-line"><span>✓</span> Ownership mocked as verified</div>
           <div className="room-preview"><b>INSIDE THE ROOM</b><p>The clock can move one day or one week at a time. The maker may leave at most one update per day.</p></div>
           <div className="entry-how"><b>BET THEY WON’T</b><span>Enter before the window closes. One challenger is drawn from everyone inside.</span></div>
-          {!joined ? <button className="giant-action" onClick={onJoin}>TAKE THE OTHER SIDE <span>→</span></button> : (
+          {!joined ? <button className="giant-action" disabled={!canJoin} onClick={onJoin}>{canJoin ? "TAKE THE OTHER SIDE" : "YOU MADE THIS BET"} <span>{canJoin ? "→" : "·"}</span></button> : (
             <div className="joined-panel"><span className="joined-check">✓</span><h3>You’re in.</h3><p>{challenge.entrantCount} people entered. One challenger will be selected when the window closes.</p><button className="giant-action" onClick={onSelect}>CLOSE ENTRY &amp; DRAW <span>→</span></button></div>
           )}
+          {!canJoin && !joined && <p className="fine-print self-entry-note">One identity cannot make and challenge the same bet. Pull another bet from Discover.</p>}
           <p className="fine-print">No money changes hands. What the system does at the deadline is revealed only after the match begins.</p>
         </section>
       </div>
@@ -806,7 +841,7 @@ function ProfilePage({ state, user, onPublishAs, onChallengeAs }: { state: DemoS
       {justCleaned && <section className="cleansed-banner"><div><span>DEFAULT RECEIVED</span><strong>One unresolved mark was cleaned.</strong></div><div className="zero-change"><span>{settlement.creditorMarksBefore}</span> → {settlement.creditorMarksAfter}</div></section>}
       <section className="profile-head"><div className="profile-avatar">{user.avatar}</div><div><p className="eyebrow">PUBLIC PROFILE</p><h1>{user.displayName}</h1><p>{user.handle} · {user.bio}</p></div><div className={`default-counter ${marked ? "marked" : "clear"}`}><span>{user.unresolvedDefaults}</span><strong>UNRESOLVED<br />DEFAULT{user.unresolvedDefaults === 1 ? "" : "S"}</strong></div></section>
       <section className="profile-grid">
-        <div className="profile-panel aftermath-panel"><p className="eyebrow">WHAT HAPPENS NEXT</p><h2>{marked ? "The identity remains." : justCleaned ? "The history remains. The mark does not." : "No unresolved marks."}</h2><p>The ledger is public, but the profile is not frozen. For the next move, continue this exact identity or enter with a new visitor name.</p><div className="identity-actions"><button className="giant-action" onClick={() => onPublishAs(user)}>CHOOSE WHO PUBLISHES <span>→</span></button><button className="giant-action secondary-identity-action" onClick={() => onChallengeAs(user)}>CHOOSE WHO CHALLENGES <span>→</span></button></div><small className="identity-action-note">A mark is never invented here. It travels only when the previous story ended in default.</small><a className="discussion-link" href={DISCUSSION_URLS.breakRule} target="_blank" rel="noreferrer">FOUND A LOOPHOLE? OPEN THE RULE ↗</a></div>
+        <div className="profile-panel aftermath-panel"><p className="eyebrow">WHAT HAPPENS NEXT</p><h2>{marked ? "The identity remains." : justCleaned ? "The history remains. The mark does not." : "No unresolved marks."}</h2><p>{user.displayName} keeps the same name for the next move. Only the outcome changes the unresolved mark count.</p><div className="identity-actions"><button className="giant-action" onClick={() => onPublishAs(user)}>PUBLISH AS {user.displayName.toUpperCase()} <span>→</span></button><button className="giant-action secondary-identity-action" onClick={() => onChallengeAs(user)}>CHALLENGE AS {user.displayName.toUpperCase()} <span>→</span></button></div><small className="identity-action-note">No renaming here. Default adds marks; paying up leaves the identity unchanged.</small><a className="discussion-link" href={DISCUSSION_URLS.breakRule} target="_blank" rel="noreferrer">FOUND A LOOPHOLE? OPEN THE RULE ↗</a></div>
         <div className="cleansing-panel rules-only"><p className="eyebrow">CLEANING RULE</p><h2>Repayment happens from the other side.</h2><ol><li><b>01</b><span>This user must later be drawn as someone else’s challenger.</span></li><li><b>02</b><span>That maker must fail and default on this user.</span></li><li><b>03</b><span>One unresolved mark is then cleared. A +10 mark takes ten qualifying defaults.</span></li></ol><p>Marks never fall below zero. Historical defaults remain visible after cleaning.</p></div>
       </section>
       <section className="ledger"><div><span>{user.historicalDefaults}</span><small>historical defaults</small></div><div><span>{user.defaultsReceived}</span><small>defaults received</small></div><div><span>{user.unresolvedDefaults}</span><small>unresolved marks now</small></div></section>
@@ -910,32 +945,21 @@ function LabPage({ copiedBrief, onCopy }: { copiedBrief: string | null; onCopy: 
   );
 }
 
-function IdentityChoiceModal({ previous, previousAvailable, intent, onClose, onChoose }: { previous: User; previousAvailable: boolean; intent: IdentityIntent; onClose: () => void; onChoose: (identity: User) => void }) {
+function NameEntryModal({ intent, onClose, onChoose }: { intent: IdentityIntent; onClose: () => void; onChoose: (displayName: string) => void }) {
   const [visitorName, setVisitorName] = useState("");
-  const actionLabel = intent === "publish" ? "publish this bet" : intent === "join" ? "take the other side" : "find another challenge";
-  const marked = previous.unresolvedDefaults > 0;
+  const actionLabel = intent === "publish" ? "PUBLISH MY BET" : "TAKE THE OTHER SIDE";
   return (
     <div className="modal-backdrop">
-      <div className="identity-choice-modal" role="dialog" aria-modal="true" aria-labelledby="identity-choice-title">
-        <button className="modal-close" onClick={onClose} aria-label="Close identity choice">×</button>
-        <p className="eyebrow">CHOOSE HOW YOU ENTER</p>
-        <h2 id="identity-choice-title">Whose name goes on the next move?</h2>
-        <p className="identity-choice-intro">Continue the identity this story actually created, or enter as a new visitor. A mark only exists if that person previously defaulted.</p>
-        <div className="identity-paths">
-          <button disabled={!previousAvailable} className={`identity-path previous-path ${marked ? "is-marked" : "is-clear"}`} onClick={() => onChoose(previous)}>
-            <span>{marked ? "CONTINUE WITH CONSEQUENCES" : "CONTINUE THIS IDENTITY"}</span>
-            <strong>{previous.displayName}</strong>
-            <small>{!previousAvailable ? "This person made the challenge and cannot challenge themselves." : marked ? `${previous.unresolvedDefaults} unresolved mark${previous.unresolvedDefaults === 1 ? "" : "s"} travel with this person` : "0 unresolved marks · no default was created"}</small>
-            <b>{previousAvailable ? `${actionLabel.toUpperCase()} →` : "CHOOSE A NEW VISITOR"}</b>
-          </button>
-          <section className="identity-path new-path">
-            <span>ENTER AS A NEW VISITOR</span>
-            <strong>Start with no marks.</strong>
-            <label htmlFor="visitor-name">WHAT SHOULD THIS ROOM CALL YOU?</label>
-            <input id="visitor-name" value={visitorName} maxLength={24} onChange={(event) => setVisitorName(event.target.value)} placeholder="Your display name" />
-            <button disabled={visitorName.trim().length < 2} onClick={() => onChoose(namedVisitor(visitorName))}>ENTER AS {visitorName.trim().toUpperCase() || "A NEW VISITOR"} →</button>
-          </section>
-        </div>
+      <div className="name-entry-modal" role="dialog" aria-modal="true" aria-labelledby="name-entry-title">
+        <button className="modal-close" onClick={onClose} aria-label="Close name entry">×</button>
+        <span className="name-entry-tag">ONE NAME · THIS WHOLE STORY</span>
+        <p className="eyebrow">ENTER THE WORLD</p>
+        <h2 id="name-entry-title">What should this room call you?</h2>
+        <p>Choose once. This is the name that will appear when you challenge, publish, and leave a message later. You will not be asked to rename yourself after the outcome.</p>
+        <label htmlFor="visitor-name">YOUR DISPLAY NAME</label>
+        <input id="visitor-name" value={visitorName} maxLength={24} onChange={(event) => setVisitorName(event.target.value)} placeholder="For example: River" />
+        <button disabled={visitorName.trim().length < 2} onClick={() => onChoose(visitorName)}>{actionLabel} AS {visitorName.trim().toUpperCase() || "…"} →</button>
+        <small>New visitors begin with 0 unresolved marks. Only a later default can change that.</small>
       </div>
     </div>
   );
