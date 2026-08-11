@@ -41,7 +41,8 @@ test("public teaser stays within three pages and ends with a demo-linked challen
   assert.match(source, /generated-ticket[\s\S]*?href=\{DEMO_URL\}/);
   assert.match(source, /Open the full playable BET I DO demo/);
   assert.match(source, /PERSONAL CHALLENGE/);
-  assert.match(source, /YOUR DISPLAY NAME/);
+  assert.match(source, /CHOOSE YOUR DEMO NAME/);
+  assert.match(source, /never assigns “Lemon” or any other default name/);
   assert.match(source, /YOUR CHALLENGE WILL ENTER THE DEMO/);
   assert.match(source, /saveVisitorChallenge/);
   assert.match(source, /LIVE IN THE PLAYABLE DEMO/);

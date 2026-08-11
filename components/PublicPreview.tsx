@@ -118,6 +118,7 @@ export function PublicPreview() {
               <p className="teaser-eyebrow"><span>PLAYABLE PREVIEW</span> A SOCIAL BET ON YOUR OWN PROMISE</p>
               <h1>You say you will.<br /><em>Someone bets<br />you won’t.</em></h1>
               <p className="teaser-lede">Name the thing you will do. Put something real behind it. Let a stranger take the other side.</p>
+              {nameLocked && <p className="teaser-saved-identity"><span>WELCOME BACK</span> Your saved Demo name is <strong>{name}</strong>. It is not a preset name.</p>}
               <div className="teaser-intro-actions">
                 <button className="teaser-next" onClick={() => setPage(1)}>CREATE YOUR CHALLENGE <span>→</span></button>
                 <small>3 short screens · about 30 seconds</small>
@@ -145,12 +146,12 @@ export function PublicPreview() {
             <div className="teaser-builder-copy">
               <p className="teaser-eyebrow"><span>02</span> MAKE IT YOURS</p>
               <h1>Put your name<br /><em>behind the promise.</em></h1>
-              <p>This is a real contribution to the Demo, not a disposable form. Future visitors may discover your challenge in a random pull.</p>
+              <p>Choose your name once for the whole Demo. If you already played before, this page reuses that saved name. Future visitors may discover your challenge in a random pull.</p>
               <div className="archive-preview-note"><span>✦</span><div><b>YOUR CHALLENGE WILL ENTER THE DEMO</b><small>Your display name, promise, duration and stake become part of the public visitor archive.</small></div></div>
             </div>
             <div className="teaser-form">
-              <div className="teaser-form-head"><div className="preview-avatar">{initials}</div><div><small>CHALLENGE MAKER</small><strong>{name.trim() || "What should we call you?"}</strong></div><span>01 / IDENTITY</span></div>
-              <label className={nameLocked ? "locked-name" : ""}><span>YOUR DISPLAY NAME</span><input value={name} disabled={nameLocked} maxLength={24} placeholder="For example: River" onChange={(event) => setName(event.target.value)} />{nameLocked && <small>This is the one name you chose for the whole Demo.</small>}</label>
+              <div className="teaser-form-head"><div className="preview-avatar">{initials}</div><div><small>CHALLENGE MAKER</small><strong>{name.trim() || "What should we call you?"}</strong></div><span>{nameLocked ? "ALREADY CHOSEN" : "01 / IDENTITY"}</span></div>
+              <label className={nameLocked ? "locked-name" : ""}><span>{nameLocked ? "YOUR SAVED DEMO NAME" : "CHOOSE YOUR DEMO NAME"}</span><input value={name} disabled={nameLocked} maxLength={24} placeholder="For example: River" onChange={(event) => setName(event.target.value)} />{nameLocked && <small>You chose this name earlier in this browser. BET I DO. never assigns “Lemon” or any other default name.</small>}</label>
               <label><span>I BET I CAN</span><input value={promise} maxLength={72} onChange={(event) => { setPromise(event.target.value); setArchiveState("idle"); }} /></label>
               <div className="teaser-form-row">
                 <fieldset><legend>TIME</legend><div>{durations.map((days) => <button type="button" aria-label={`${days} days`} className={duration === days ? "selected" : ""} key={days} onClick={() => { setDuration(days); setArchiveState("idle"); }}>{days}<small>D</small></button>)}</div></fieldset>
