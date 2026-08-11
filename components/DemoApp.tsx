@@ -719,12 +719,15 @@ function ChallengePage({ challenge, creatorName, joined, canJoin, messages, onJo
           <StakeObject challenge={challenge} /><blockquote>“{challenge.stake.significance}”</blockquote><div className="verified-line"><span>✓</span> Ownership mocked as verified</div>
           <div className="room-preview"><b>INSIDE THE ROOM</b><p>The clock can move one day or one week at a time. The maker may leave at most one update per day.</p></div>
           <div className="public-room-history">
-            <div><b>{challenge.ownedByCurrentVisitor ? "YOUR BET · WATCH-ONLY" : "ROOM HISTORY"}</b><span>{roomMessages.length} MESSAGE{roomMessages.length === 1 ? "" : "S"}</span></div>
-            {roomMessages.length === 0 ? <p>No messages have been left in this room yet.</p> : roomMessages.map((message) => {
-              const challengerMessage = message.kind === "CHALLENGER_NOTE";
-              const authorName = challengerMessage ? message.authorName ?? "Past challenger" : creatorName;
-              return <article key={message.id} className={challengerMessage ? "challenger-history-note" : "maker-history-note"}><small>{challengerMessage ? "CHALLENGER" : "MAKER"} · DAY {message.day}</small><strong>{authorName}</strong><p>{message.body}</p></article>;
-            })}
+            <div className="public-room-heading"><b>{challenge.ownedByCurrentVisitor ? "YOUR BET · WATCH-ONLY" : "ROOM HISTORY"}</b><span>{roomMessages.length} MESSAGE{roomMessages.length === 1 ? "" : "S"}</span></div>
+            <div className="public-room-scroll" role="region" aria-label="Scrollable room history">
+              {roomMessages.length === 0 ? <p>No messages have been left in this room yet.</p> : roomMessages.map((message) => {
+                const challengerMessage = message.kind === "CHALLENGER_NOTE";
+                const authorName = challengerMessage ? message.authorName ?? "Past challenger" : creatorName;
+                return <article key={message.id} className={challengerMessage ? "challenger-history-note" : "maker-history-note"}><small>{challengerMessage ? "CHALLENGER" : "MAKER"} · DAY {message.day}</small><strong>{authorName}</strong><p>{message.body}</p></article>;
+              })}
+            </div>
+            {roomMessages.length > 3 && <small className="room-scroll-hint">SCROLL TO EXPLORE · NEWEST DAYS BELOW</small>}
           </div>
           <div className="entry-how"><b>BET THEY WON’T</b><span>Enter before the window closes. One challenger is drawn from everyone inside.</span></div>
           {!joined ? <button className="giant-action" disabled={!canJoin} onClick={onJoin}>{canJoin ? "TAKE THE OTHER SIDE" : "YOU MADE THIS BET"} <span>{canJoin ? "→" : "·"}</span></button> : (

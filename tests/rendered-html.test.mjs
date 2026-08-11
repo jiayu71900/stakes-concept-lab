@@ -75,6 +75,8 @@ test("renders the consequence path and both join affordances without simulation 
   assert.match(source, /onProfile\(cleanedVisitorMark \? state\.viewer\.id : state\.creator\.id\)/);
   assert.match(source, /LIVE IN RANDOM DISCOVER NOW/);
   assert.match(source, /YOUR BET · WATCH-ONLY/);
+  assert.match(source, /Scrollable room history/);
+  assert.match(source, /SCROLL TO EXPLORE · NEWEST DAYS BELOW/);
   assert.match(source, /\{ includeOwn: true \}/);
   assert.doesNotMatch(source, /deterministicDiscovery/);
   assert.doesNotMatch(source, /PUBLISH AS \{user\.displayName\.toUpperCase\(\)\}|CHALLENGE AS \{user\.displayName\.toUpperCase\(\)\}/);

@@ -218,13 +218,15 @@ button { color: inherit; }
 .publisher-actions { display: grid; gap: 9px; }
 .publisher-actions .secondary-publisher-action { background: var(--white); color: var(--ink); box-shadow: none; }
 .public-room-history { margin-top: 18px; padding: 14px; border: 1.5px solid var(--ink); background: rgba(255,255,255,.7); }
-.public-room-history > div { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 9px; border-bottom: 1px solid var(--ink); font: 900 8px Arial, sans-serif; letter-spacing: .1em; }
-.public-room-history > p { margin: 12px 0 0; color: var(--muted); font: italic 12px/1.4 Georgia, serif; }
-.public-room-history article { margin-top: 10px; padding: 11px; border: 1px solid var(--ink); background: var(--white); }
+.public-room-heading { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 9px; border-bottom: 1px solid var(--ink); font: 900 8px Arial, sans-serif; letter-spacing: .1em; }
+.public-room-history .public-room-scroll { display: block; max-height: 310px; padding: 0 8px 8px 0; border: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.public-room-scroll > p { margin: 12px 0 0; color: var(--muted); font: italic 12px/1.4 Georgia, serif; }
+.public-room-scroll article { margin-top: 10px; padding: 11px; border: 1px solid var(--ink); background: var(--white); }
 .public-room-history article.challenger-history-note { margin-left: 22px; background: var(--acid); }
 .public-room-history article small { display: block; font: 900 7px Arial, sans-serif; letter-spacing: .1em; color: var(--blue); }
 .public-room-history article strong { display: block; margin-top: 4px; font-size: 11px; }
 .public-room-history article p { margin: 7px 0 0; font: 13px/1.4 Georgia, serif; }
+.room-scroll-hint { display: block; padding-top: 9px; border-top: 1px solid var(--ink); color: var(--blue); font: 900 7px Arial, sans-serif; letter-spacing: .1em; }
 
 .match-page { min-height: 780px; padding: 65px 5vw 95px; background: var(--acid); text-align: center; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
 .match-burst { position: absolute; border: 2px solid var(--ink); border-radius: 50%; opacity: .18; }
@@ -604,6 +606,7 @@ button { color: inherit; }
   .publisher-meta span { flex: 1; padding: 9px; }
   .contract-card { min-height: 590px; }
   .contract-card h2 { font-size: 38px; }
+  .public-room-history .public-room-scroll { max-height: 260px; -webkit-overflow-scrolling: touch; }
   .versus { grid-template-columns: 1fr 55px 1fr; }
   .fighter > span { width: 85px; height: 85px; font-size: 23px; box-shadow: 5px 5px 0 var(--ink); }
   .fighter h2 { font-size: 31px; }
