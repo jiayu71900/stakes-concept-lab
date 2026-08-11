@@ -48,6 +48,10 @@ test("visitor archive is an inviting, explicit choice", async () => {
   assert.match(source, /LET MY STORY TRAVEL/);
   assert.match(source, /KEEP THIS SESSION ONLY/);
   assert.match(source, /never your real name, contact details, address, payment, or shipping information/);
+  assert.match(source, /A mark only exists if that person previously defaulted/);
+  assert.match(source, /WHAT SHOULD THIS ROOM CALL YOU/);
+  assert.match(source, /Every challenger may leave one message on one chosen day/);
+  assert.match(source, /Future challengers can find it in this room’s history/);
 });
 
 test("renders the consequence path and both join affordances without simulation copy", async () => {
@@ -59,8 +63,8 @@ test("renders the consequence path and both join affordances without simulation 
   const [challenge, outcome, profile, lab] = pages;
   assert.match(challenge, /BET THEY WON’T/);
   assert.match(outcome, /LET 72H EXPIRE/);
-  assert.match(profile, /PUBLISH AS[\s\S]*?JIAYU/);
-  assert.match(profile, /CHALLENGE AS[\s\S]*?JIAYU/);
+  assert.match(profile, /CHOOSE WHO PUBLISHES/);
+  assert.match(profile, /CHOOSE WHO CHALLENGES/);
   assert.match(profile, /CLEANING RULE/);
   assert.match(profile, /FOUND A LOOPHOLE/);
   assert.match(lab, /HOW TO JOIN/);

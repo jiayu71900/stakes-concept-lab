@@ -75,9 +75,11 @@ export interface ChallengeMessage {
   id: string;
   challengeId: string;
   authorId: string;
+  authorName?: string;
   day: number;
   body: string;
-  kind: "CREATOR_UPDATE";
+  kind: "CREATOR_UPDATE" | "CHALLENGER_NOTE";
+  ownedByCurrentVisitor?: boolean;
 }
 
 export interface Challenge {

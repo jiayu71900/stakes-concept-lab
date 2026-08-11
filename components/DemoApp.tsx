@@ -8,10 +8,11 @@ import { deterministicDiscovery } from "@/engine/discoveryEngine";
 import { advanceThrough, transitionChallenge } from "@/engine/challengeStateMachine";
 import { recordDefault } from "@/engine/defaultEngine";
 import { rankLeaderboard } from "@/engine/leaderboardEngine";
-import { loadVisitorArchive, saveVisitorChallenge, saveVisitorMessage } from "@/lib/visitorArchiveClient";
+import { loadVisitorArchive, saveVisitorChallenge, saveVisitorChallengerNote, saveVisitorMessage } from "@/lib/visitorArchiveClient";
 
 type DemoView = "discover" | "challenge" | "match" | "outcome" | "profile" | "lab";
-const STORAGE_KEY = "bet-i-do-demo-v4";
+type IdentityIntent = "publish" | "challenge" | "join";
+const STORAGE_KEY = "bet-i-do-demo-v5";
 const REPOSITORY_URL = "https://github.com/jiayu71900/stakes-concept-lab";
 const DISCUSSION_URLS = {
   firstImpressions: `${REPOSITORY_URL}/discussions/new?category=first-impressions`,
@@ -53,6 +54,22 @@ function money(value: number) {
 
 function creatorFor(challenge: Challenge, pool: User[] = creators) {
   return pool.find((creator) => creator.id === challenge.creatorId) ?? creators[0];
+}
+
+function namedVisitor(displayName: string): User {
+  const cleanName = displayName.trim().slice(0, 24);
+  const initials = cleanName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "VI";
+  return {
+    id: `visitor-player-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    handle: `@${cleanName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "visitor"}`,
+    displayName: cleanName,
+    avatar: initials,
+    bio: "A visitor playing this story.",
+    unresolvedDefaults: 0,
+    historicalDefaults: 0,
+    defaultsReceived: 0,
+    refreshesRemaining: 7,
+  };
 }
 
 function createStateForView(view: DemoView): DemoState {
@@ -105,7 +122,8 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [showCreatedToast, setShowCreatedToast] = useState(false);
   const [copiedBrief, setCopiedBrief] = useState<string | null>(null);
-  const [createIdentityId, setCreateIdentityId] = useState("you");
+  const [createIdentity, setCreateIdentity] = useState<User | null>(null);
+  const [identityChoice, setIdentityChoice] = useState<{ intent: IdentityIntent; previous: User } | null>(null);
   const [publisherMode, setPublisherMode] = useState(false);
   const [profileIdentityId, setProfileIdentityId] = useState<string | null>(null);
   const [visitorChallenges, setVisitorChallenges] = useState<Challenge[]>([]);
@@ -197,7 +215,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   };
 
   const createChallenge = async (durationDays: number, title: string, stakeName: string, firstMessage: string, shareWithFutureVisitors: boolean) => {
-    const identity = createIdentityId === state.creator.id ? state.creator : state.viewer;
+    const identity = createIdentity ?? state.viewer;
     const localDraft: Challenge = {
       ...structuredClone(challenges[0]),
       id: `local-${Date.now()}`,
@@ -225,12 +243,19 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     setArchiveSaved(false);
     if (shareWithFutureVisitors) {
       try {
-        const archived = await saveVisitorChallenge({ title, durationDays, stakeName, firstMessage });
+        const archived = await saveVisitorChallenge({ creatorName: identity.displayName, title, durationDays, stakeName, firstMessage });
         opened = archived.challenge;
-        publishedCreator = archived.creator;
+        publishedCreator = {
+          ...archived.creator,
+          avatar: identity.avatar,
+          bio: identity.bio,
+          unresolvedDefaults: identity.unresolvedDefaults,
+          historicalDefaults: identity.historicalDefaults,
+          defaultsReceived: identity.defaultsReceived,
+        };
         archivedMessage = archived.message;
         setVisitorChallenges((current) => [archived.challenge, ...current.filter((challenge) => challenge.id !== archived.challenge.id)]);
-        setVisitorCreators((current) => [archived.creator, ...current.filter((creator) => creator.id !== archived.creator.id)]);
+        setVisitorCreators((current) => [publishedCreator, ...current.filter((creator) => creator.id !== publishedCreator.id)]);
         setArchiveSaved(true);
       } catch {
         // The playable local path remains available when the archive is temporarily unavailable.
@@ -239,6 +264,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     setState((current) => ({
       ...current,
       creator: publishedCreator,
+      viewer: { ...publishedCreator },
       featured: opened,
       joined: false,
       simulatedDay: 0,
@@ -252,15 +278,16 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     navigate("challenge");
   };
 
-  const joinChallenge = () => {
+  const joinChallenge = (identity: User) => {
     if (state.featured.state !== "OPEN") return;
     setState((current) => ({
       ...current,
+      viewer: { ...identity, refreshesRemaining: current.viewer.refreshesRemaining },
       joined: true,
       featured: {
         ...current.featured,
         entrantCount: current.featured.entrantCount + 1,
-        entrantIds: [...current.featured.entrantIds, current.viewer.id],
+        entrantIds: [...current.featured.entrantIds, identity.id],
       },
       lastEvent: "JOINED",
     }));
@@ -350,6 +377,31 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     }
   };
 
+  const postChallengerNote = async (day: number, body: string) => {
+    const text = body.trim();
+    const alreadyPosted = state.messages.some((message) => message.challengeId === state.featured.id && message.kind === "CHALLENGER_NOTE" && message.ownedByCurrentVisitor);
+    if (!text || alreadyPosted || day < 1 || day > state.featured.durationDays) return { ok: false, message: "One challenger message is allowed for this challenge." };
+    let note = {
+      id: `local-challenger-note-${Date.now()}`,
+      challengeId: state.featured.id,
+      authorId: state.viewer.id,
+      authorName: state.viewer.displayName,
+      day,
+      body: text,
+      kind: "CHALLENGER_NOTE" as const,
+      ownedByCurrentVisitor: true,
+    };
+    if (!state.featured.id.startsWith("local-")) {
+      try {
+        note = await saveVisitorChallengerNote({ challengeId: state.featured.id, authorName: state.viewer.displayName, day, body: text });
+      } catch (error) {
+        return { ok: false, message: error instanceof Error ? error.message : "This message could not be saved." };
+      }
+    }
+    setState((current) => ({ ...current, messages: [...current.messages, note] }));
+    return { ok: true, message: state.featured.id.startsWith("local-") ? `Your message now lives on day ${day} in this session.` : `Your message now lives on day ${day} for future challengers.` };
+  };
+
   const simulateShipment = () => {
     if (state.featured.state !== "AWAITING_SHIPMENT") return;
     setState((current) => ({
@@ -411,6 +463,20 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     navigate("discover");
   };
 
+  const continueWithIdentity = (identity: User, intent: IdentityIntent) => {
+    setIdentityChoice(null);
+    if (intent === "publish") {
+      setCreateIdentity(identity);
+      setCreateOpen(true);
+      return;
+    }
+    if (intent === "join") {
+      joinChallenge(identity);
+      return;
+    }
+    challengeAsProfile(identity);
+  };
+
   const openProfile = (identityId: string) => {
     setProfileIdentityId(identityId);
     navigate("profile");
@@ -432,7 +498,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         <nav className="nav-links" aria-label="Primary navigation">
           <button className={view === "discover" ? "active" : ""} onClick={() => navigate("discover")}>Discover</button>
           <button className={view === "lab" ? "active" : ""} onClick={() => navigate("lab")}>Build with us</button>
-          <button className="make-button" onClick={() => { setCreateIdentityId(state.viewer.id); setCreateOpen(true); }}>+ Make a bet</button>
+          <button className="make-button" onClick={() => setIdentityChoice({ intent: "publish", previous: state.viewer })}>+ Make a bet</button>
         </nav>
       </header>
 
@@ -449,11 +515,11 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         <DiscoverPage challenge={currentDiscovery} refreshes={state.viewer.refreshesRemaining} leaderboards={leaderboards} onRefresh={refreshDiscovery} onOpen={openChallenge} />
       )}
       {view === "challenge" && (
-        publisherMode ? <PublisherChallengePage challenge={state.featured} creator={state.creator} onViewPublic={() => setPublisherMode(false)} /> : <ChallengePage challenge={state.featured} creatorName={state.creator.displayName} joined={state.joined} onJoin={joinChallenge} onSelect={simulateSelection} />
+        publisherMode ? <PublisherChallengePage challenge={state.featured} creator={state.creator} onViewPublic={() => setPublisherMode(false)} /> : <ChallengePage challenge={state.featured} creatorName={state.creator.displayName} joined={state.joined} onJoin={() => setIdentityChoice({ intent: "join", previous: state.viewer })} onSelect={simulateSelection} />
       )}
-      {view === "match" && <MatchPage state={state} onStart={startChallenge} onAdvance={advanceDays} onResolve={resolveChallenge} onPostMessage={postDailyMessage} />}
+      {view === "match" && <MatchPage state={state} onStart={startChallenge} onAdvance={advanceDays} onResolve={resolveChallenge} onPostMessage={postDailyMessage} onPostChallengerNote={postChallengerNote} />}
       {view === "outcome" && <OutcomePage state={state} onDefault={simulateDefault} onShip={simulateShipment} onProfile={openProfile} />}
-      {view === "profile" && <ProfilePage state={state} user={profileIdentity} onPublishAs={(identity) => { setCreateIdentityId(identity.id); setCreateOpen(true); }} onChallengeAs={challengeAsProfile} />}
+      {view === "profile" && <ProfilePage state={state} user={profileIdentity} onPublishAs={(identity) => setIdentityChoice({ intent: "publish", previous: identity })} onChallengeAs={(identity) => setIdentityChoice({ intent: "challenge", previous: identity })} />}
       {view === "lab" && <LabPage copiedBrief={copiedBrief} onCopy={copyBrief} />}
 
       <footer className="footer">
@@ -461,7 +527,8 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         <button onClick={() => navigate("lab")}>Build with us →</button>
       </footer>
 
-      {createOpen && <CreateModal identity={createIdentityId === state.creator.id ? state.creator : state.viewer} onClose={() => setCreateOpen(false)} onCreate={createChallenge} />}
+      {identityChoice && <IdentityChoiceModal previous={identityChoice.previous} previousAvailable={identityChoice.intent !== "join" || identityChoice.previous.id !== state.creator.id} intent={identityChoice.intent} onClose={() => setIdentityChoice(null)} onChoose={(identity) => continueWithIdentity(identity, identityChoice.intent)} />}
+      {createOpen && <CreateModal identity={createIdentity ?? state.viewer} onClose={() => setCreateOpen(false)} onCreate={createChallenge} />}
     </main>
   );
 }
@@ -583,19 +650,26 @@ function ChallengePage({ challenge, creatorName, joined, onJoin, onSelect }: { c
   );
 }
 
-function MatchPage({ state, onStart, onAdvance, onResolve, onPostMessage }: {
+function MatchPage({ state, onStart, onAdvance, onResolve, onPostMessage, onPostChallengerNote }: {
   state: DemoState;
   onStart: () => void;
   onAdvance: (days: number) => void;
   onResolve: (result: "SUCCESS" | "FAILED") => void;
   onPostMessage: (body: string) => void;
+  onPostChallengerNote: (day: number, body: string) => Promise<{ ok: boolean; message: string }>;
 }) {
   const [draft, setDraft] = useState("");
+  const [challengerDraft, setChallengerDraft] = useState("");
+  const [challengerDay, setChallengerDay] = useState(() => Math.max(1, Math.round(state.featured.durationDays / 2)));
+  const [challengerStatus, setChallengerStatus] = useState("");
+  const [postingChallengerNote, setPostingChallengerNote] = useState(false);
   const challenge = state.featured;
   const visibleMessages = state.messages
     .filter((message) => message.challengeId === challenge.id && message.day <= state.simulatedDay)
-    .toSorted((a, b) => b.day - a.day);
-  const postedToday = state.messages.some((message) => message.challengeId === challenge.id && message.authorId === state.creator.id && message.day === state.simulatedDay);
+    .toSorted((a, b) => a.day - b.day);
+  const postedToday = state.messages.some((message) => message.challengeId === challenge.id && message.kind === "CREATOR_UPDATE" && message.authorId === state.creator.id && message.day === state.simulatedDay);
+  const myChallengerNote = state.messages.find((message) => message.challengeId === challenge.id && message.kind === "CHALLENGER_NOTE" && message.ownedByCurrentVisitor);
+  const playingAsMaker = state.viewer.id === state.creator.id;
   const progress = Math.round((state.simulatedDay / challenge.durationDays) * 100);
   const roomStarted = challenge.state !== "MATCHED";
 
@@ -603,7 +677,7 @@ function MatchPage({ state, onStart, onAdvance, onResolve, onPostMessage }: {
     return (
       <div className="match-page">
         <div className="match-burst burst-one" /><div className="match-burst burst-two" /><p className="eyebrow">BET ACCEPTED</p><div className="selected-stamp">YOU WERE SELECTED</div>
-        <div className="versus"><div className="fighter"><span>{state.creator.avatar}</span><h2>{state.creator.displayName}</h2><p>MAKER</p></div><div className="vs-mark">VS</div><div className="fighter you"><span>YO</span><h2>YOU</h2><p>CHALLENGER</p></div></div>
+        <div className="versus"><div className="fighter"><span>{state.creator.avatar}</span><h2>{state.creator.displayName}</h2><p>MAKER</p></div><div className="vs-mark">VS</div><div className="fighter you"><span>{state.viewer.avatar}</span><h2>{state.viewer.displayName}</h2><p>CHALLENGER</p></div></div>
         <StakeObject challenge={challenge} compact /><div className="match-time"><strong>{challenge.durationDays}</strong><span>DAYS<br />ON THE CLOCK</span></div><button className="dark-action" onClick={onStart}>ENTER THE CHALLENGE ROOM <span>→</span></button>
       </div>
     );
@@ -620,7 +694,7 @@ function MatchPage({ state, onStart, onAdvance, onResolve, onPostMessage }: {
         <section className="simulation-panel">
           <div className="day-display"><span>DAY</span><strong>{state.simulatedDay}</strong><small>OF {challenge.durationDays}</small></div>
           <div className="progress-track"><i style={{ width: `${progress}%` }} /></div>
-          <div className="room-stats"><span><b>{challenge.durationDays - state.simulatedDay}</b> days left</span><span><b>{progress}%</b> elapsed</span><span><b>{visibleMessages.length}</b> maker updates</span></div>
+          <div className="room-stats"><span><b>{challenge.durationDays - state.simulatedDay}</b> days left</span><span><b>{progress}%</b> elapsed</span><span><b>{visibleMessages.length}</b> room messages</span></div>
 
           {challenge.state === "ACTIVE" && (
             <div className="time-controls">
@@ -641,17 +715,48 @@ function MatchPage({ state, onStart, onAdvance, onResolve, onPostMessage }: {
         </section>
 
         <aside className="message-panel">
-          <div className="message-title"><span>MAKER LOG</span><strong>Updates, not a streak.</strong><small>At most one note per day. Silence is allowed.</small></div>
+          <div className="message-title"><span>ROOM HISTORY</span><strong>The conversation travels.</strong><small>Makers may post once each day. Every challenger may leave one message on one chosen day.</small></div>
           <div className="message-feed">
             {visibleMessages.length === 0 && <p className="empty-feed">No updates yet. Move to day one.</p>}
-            {visibleMessages.map((message) => <article key={message.id}><div><span>{state.creator.avatar}</span><strong>{state.creator.displayName}</strong><small>DAY {message.day}</small></div><p>{message.body}</p></article>)}
+            {visibleMessages.map((message) => {
+              const challengerMessage = message.kind === "CHALLENGER_NOTE";
+              const authorName = challengerMessage ? message.authorName ?? "Past challenger" : state.creator.displayName;
+              const avatar = challengerMessage ? authorName.slice(0, 2).toUpperCase() : state.creator.avatar;
+              return <article className={challengerMessage ? "challenger-bubble" : "maker-bubble"} key={message.id}><div><span>{avatar}</span><strong>{authorName}</strong><small>{challengerMessage ? "CHALLENGER · " : "MAKER · "}DAY {message.day}</small></div><p>{message.body}</p></article>;
+            })}
           </div>
-          {challenge.state === "ACTIVE" && (
+          {challenge.state === "ACTIVE" && playingAsMaker && (
             <form className="message-composer" onSubmit={(event) => { event.preventDefault(); onPostMessage(draft); setDraft(""); }}>
-              <label htmlFor="daily-note">PLAY AS {state.creator.displayName.toUpperCase()} · DAY {state.simulatedDay}</label>
+              <label htmlFor="daily-note">MAKER · {state.creator.displayName.toUpperCase()} · DAY {state.simulatedDay}</label>
               {challenge.id.startsWith("visitor-") && <p className="archive-message-notice">YOUR STORY CAN TRAVEL · This note may appear with your challenge when future visitors discover it.</p>}
               <textarea id="daily-note" value={draft} onChange={(event) => setDraft(event.target.value)} disabled={state.simulatedDay < 1 || postedToday} maxLength={180} placeholder={state.simulatedDay < 1 ? "Start the clock first." : postedToday ? "Today’s note has already been posted." : "Leave today’s update…"} />
               <div><small>{draft.length}/180</small><button disabled={!draft.trim() || state.simulatedDay < 1 || postedToday}>POST TODAY’S NOTE</button></div>
+            </form>
+          )}
+          {!playingAsMaker && (
+            <form className="challenger-composer" onSubmit={async (event) => {
+              event.preventDefault();
+              setPostingChallengerNote(true);
+              const result = await onPostChallengerNote(challengerDay, challengerDraft);
+              setPostingChallengerNote(false);
+              setChallengerStatus(result.message);
+              if (result.ok) setChallengerDraft("");
+            }}>
+              <span className="challenger-composer-tag">ONE MESSAGE · YOUR CHOSEN DAY</span>
+              <h3>{myChallengerNote ? "Your voice is now part of this room." : `What would ${state.viewer.displayName} leave behind?`}</h3>
+              {myChallengerNote ? (
+                <div className="saved-challenger-note"><b>DAY {myChallengerNote.day}</b><p>“{myChallengerNote.body}”</p><small>Future challengers can find it in this room’s history.</small></div>
+              ) : (
+                <>
+                  <label htmlFor="challenger-day">PLACE IT ON DAY <b>{challengerDay}</b></label>
+                  <input id="challenger-day" type="range" min="1" max={challenge.durationDays} value={challengerDay} onChange={(event) => setChallengerDay(Number(event.target.value))} />
+                  <div className="day-range-labels"><span>DAY 1</span><span>DAY {challenge.durationDays}</span></div>
+                  <textarea value={challengerDraft} onChange={(event) => setChallengerDraft(event.target.value)} maxLength={180} placeholder="Leave one line for the maker—and for whoever challenges them next…" />
+                  <p>Your chosen name and this message will appear in the room’s shared history.</p>
+                  <button disabled={postingChallengerNote || challengerDraft.trim().length < 2}>{postingChallengerNote ? "ADDING YOUR VOICE…" : "LEAVE IT IN THE ROOM →"}</button>
+                </>
+              )}
+              {challengerStatus && <small className="challenger-status" role="status">{challengerStatus}</small>}
             </form>
           )}
         </aside>
@@ -701,7 +806,7 @@ function ProfilePage({ state, user, onPublishAs, onChallengeAs }: { state: DemoS
       {justCleaned && <section className="cleansed-banner"><div><span>DEFAULT RECEIVED</span><strong>One unresolved mark was cleaned.</strong></div><div className="zero-change"><span>{settlement.creditorMarksBefore}</span> → {settlement.creditorMarksAfter}</div></section>}
       <section className="profile-head"><div className="profile-avatar">{user.avatar}</div><div><p className="eyebrow">PUBLIC PROFILE</p><h1>{user.displayName}</h1><p>{user.handle} · {user.bio}</p></div><div className={`default-counter ${marked ? "marked" : "clear"}`}><span>{user.unresolvedDefaults}</span><strong>UNRESOLVED<br />DEFAULT{user.unresolvedDefaults === 1 ? "" : "S"}</strong></div></section>
       <section className="profile-grid">
-        <div className="profile-panel aftermath-panel"><p className="eyebrow">WHAT HAPPENS NEXT</p><h2>{marked ? "The identity remains." : justCleaned ? "The history remains. The mark does not." : "No unresolved marks."}</h2><p>The ledger is public, but the profile is not frozen. Continue as this person and notice where the mark quietly follows.</p><div className="identity-actions"><button className="giant-action" onClick={() => onPublishAs(user)}>PUBLISH AS {user.displayName.toUpperCase()} <span>→</span></button><button className="giant-action secondary-identity-action" onClick={() => onChallengeAs(user)}>CHALLENGE AS {user.displayName.toUpperCase()} <span>→</span></button></div><small className="identity-action-note">Both paths stay open. Unresolved marks travel with the identity; cleaned marks remain only in history.</small><a className="discussion-link" href={DISCUSSION_URLS.breakRule} target="_blank" rel="noreferrer">FOUND A LOOPHOLE? OPEN THE RULE ↗</a></div>
+        <div className="profile-panel aftermath-panel"><p className="eyebrow">WHAT HAPPENS NEXT</p><h2>{marked ? "The identity remains." : justCleaned ? "The history remains. The mark does not." : "No unresolved marks."}</h2><p>The ledger is public, but the profile is not frozen. For the next move, continue this exact identity or enter with a new visitor name.</p><div className="identity-actions"><button className="giant-action" onClick={() => onPublishAs(user)}>CHOOSE WHO PUBLISHES <span>→</span></button><button className="giant-action secondary-identity-action" onClick={() => onChallengeAs(user)}>CHOOSE WHO CHALLENGES <span>→</span></button></div><small className="identity-action-note">A mark is never invented here. It travels only when the previous story ended in default.</small><a className="discussion-link" href={DISCUSSION_URLS.breakRule} target="_blank" rel="noreferrer">FOUND A LOOPHOLE? OPEN THE RULE ↗</a></div>
         <div className="cleansing-panel rules-only"><p className="eyebrow">CLEANING RULE</p><h2>Repayment happens from the other side.</h2><ol><li><b>01</b><span>This user must later be drawn as someone else’s challenger.</span></li><li><b>02</b><span>That maker must fail and default on this user.</span></li><li><b>03</b><span>One unresolved mark is then cleared. A +10 mark takes ten qualifying defaults.</span></li></ol><p>Marks never fall below zero. Historical defaults remain visible after cleaning.</p></div>
       </section>
       <section className="ledger"><div><span>{user.historicalDefaults}</span><small>historical defaults</small></div><div><span>{user.defaultsReceived}</span><small>defaults received</small></div><div><span>{user.unresolvedDefaults}</span><small>unresolved marks now</small></div></section>
@@ -801,6 +906,37 @@ function LabPage({ copiedBrief, onCopy }: { copiedBrief: string | null; onCopy: 
         <h2>Stay because the rules are harder than they look.</h2>
         <p>The public repository is open now. Enter through a real question, leave evidence, and stay with the direction if it deserves deeper ownership.</p>
       </section>
+    </div>
+  );
+}
+
+function IdentityChoiceModal({ previous, previousAvailable, intent, onClose, onChoose }: { previous: User; previousAvailable: boolean; intent: IdentityIntent; onClose: () => void; onChoose: (identity: User) => void }) {
+  const [visitorName, setVisitorName] = useState("");
+  const actionLabel = intent === "publish" ? "publish this bet" : intent === "join" ? "take the other side" : "find another challenge";
+  const marked = previous.unresolvedDefaults > 0;
+  return (
+    <div className="modal-backdrop">
+      <div className="identity-choice-modal" role="dialog" aria-modal="true" aria-labelledby="identity-choice-title">
+        <button className="modal-close" onClick={onClose} aria-label="Close identity choice">×</button>
+        <p className="eyebrow">CHOOSE HOW YOU ENTER</p>
+        <h2 id="identity-choice-title">Whose name goes on the next move?</h2>
+        <p className="identity-choice-intro">Continue the identity this story actually created, or enter as a new visitor. A mark only exists if that person previously defaulted.</p>
+        <div className="identity-paths">
+          <button disabled={!previousAvailable} className={`identity-path previous-path ${marked ? "is-marked" : "is-clear"}`} onClick={() => onChoose(previous)}>
+            <span>{marked ? "CONTINUE WITH CONSEQUENCES" : "CONTINUE THIS IDENTITY"}</span>
+            <strong>{previous.displayName}</strong>
+            <small>{!previousAvailable ? "This person made the challenge and cannot challenge themselves." : marked ? `${previous.unresolvedDefaults} unresolved mark${previous.unresolvedDefaults === 1 ? "" : "s"} travel with this person` : "0 unresolved marks · no default was created"}</small>
+            <b>{previousAvailable ? `${actionLabel.toUpperCase()} →` : "CHOOSE A NEW VISITOR"}</b>
+          </button>
+          <section className="identity-path new-path">
+            <span>ENTER AS A NEW VISITOR</span>
+            <strong>Start with no marks.</strong>
+            <label htmlFor="visitor-name">WHAT SHOULD THIS ROOM CALL YOU?</label>
+            <input id="visitor-name" value={visitorName} maxLength={24} onChange={(event) => setVisitorName(event.target.value)} placeholder="Your display name" />
+            <button disabled={visitorName.trim().length < 2} onClick={() => onChoose(namedVisitor(visitorName))}>ENTER AS {visitorName.trim().toUpperCase() || "A NEW VISITOR"} →</button>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

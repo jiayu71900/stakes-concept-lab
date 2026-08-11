@@ -42,7 +42,7 @@ const worker = {
       }, allowedWidths);
     }
 
-    if (url.pathname === "/api/visitor-challenges" || url.pathname === "/api/visitor-messages") {
+    if (url.pathname === "/api/visitor-challenges" || url.pathname === "/api/visitor-messages" || url.pathname === "/api/visitor-challenger-notes") {
       return handleVisitorArchiveRequest(request, env.DB);
     }
 

@@ -45,6 +45,11 @@ pulls. Declining keeps the challenge in the current browser session only. The
 archive does not collect real names, contact details, addresses, payment, or
 shipping information.
 
+Publishing and challenging both begin with an identity choice. A visitor may
+continue the identity produced by the previous outcome or enter under a new
+display name with zero marks. The interface never invents a marked role: an
+unresolved mark exists only after the maker actually defaults.
+
 The separate **Build With Us Lab** turns unresolved system questions into
 contribution paths. It is the collaborator funnel, not a fictional team page.
 
@@ -64,7 +69,8 @@ Start with something concrete. Continue where ownership makes sense. See
 
 - Ordinary bets are discovered through limited random pulls, never search.
 - Bet duration is chosen at creation time: 7, 14, 21, 30, or 60 days.
-- A maker may post at most one Challenge Room update per day. Silence is allowed.
+- A maker may post throughout the full challenge, with at most one Challenge Room update per day and no overall message limit. Silence is allowed.
+- Each challenger may leave one named message on any chosen challenge day. It becomes part of the shared room history for future challengers.
 - Three leaderboards exist: **Highest Stakes**, **Most Watched**, and **Most Interesting**.
 - Any unresolved default removes all of a creator’s bets from leaderboards.
 - A default does **not** block creating, discovering, or challenging.

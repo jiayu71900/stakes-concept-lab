@@ -34,3 +34,24 @@ ON visitor_messages(challenge_id, day)`;
 export const visitorChallengesOwnerIndex = `
 CREATE INDEX IF NOT EXISTS idx_visitor_challenges_owner_created
 ON visitor_challenges(owner_hash, created_at DESC)`;
+
+export const visitorChallengerNotesSchema = `
+CREATE TABLE IF NOT EXISTS visitor_challenger_notes (
+  id TEXT PRIMARY KEY NOT NULL,
+  challenge_id TEXT NOT NULL,
+  owner_hash TEXT NOT NULL,
+  author_alias TEXT NOT NULL,
+  day INTEGER NOT NULL,
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'visible',
+  UNIQUE (challenge_id, owner_hash)
+)`;
+
+export const visitorChallengerNotesChallengeIndex = `
+CREATE INDEX IF NOT EXISTS idx_visitor_challenger_notes_challenge_day
+ON visitor_challenger_notes(challenge_id, day, created_at)`;
+
+export const visitorChallengerNotesOwnerIndex = `
+CREATE INDEX IF NOT EXISTS idx_visitor_challenger_notes_owner_created
+ON visitor_challenger_notes(owner_hash, created_at DESC)`;

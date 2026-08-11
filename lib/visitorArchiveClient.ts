@@ -17,9 +17,15 @@ interface VisitorMessageDto {
   createdAt: string;
 }
 
+interface VisitorChallengerNoteDto extends VisitorMessageDto {
+  authorName: string;
+  isMine: boolean;
+}
+
 interface VisitorArchiveDto {
   challenges: VisitorChallengeDto[];
   messages: VisitorMessageDto[];
+  challengerNotes: VisitorChallengerNoteDto[];
 }
 
 const SESSION_KEY = "bet-i-do-visitor-session-v1";
@@ -86,7 +92,7 @@ function toChallenge(item: VisitorChallengeDto): Challenge {
 }
 
 export async function loadVisitorArchive() {
-  const response = await fetch("/api/visitor-challenges?limit=24", { cache: "no-store" });
+  const response = await fetch("/api/visitor-challenges?limit=24", { cache: "no-store", headers: sessionHeaders() });
   if (!response.ok) throw new Error("Visitor archive unavailable");
   const data = await response.json() as VisitorArchiveDto;
   const creators = data.challenges.map(toCreator);
@@ -95,10 +101,20 @@ export async function loadVisitorArchive() {
     const challenge = challengeById.get(message.challengeId);
     return challenge ? [{ id: message.id, challengeId: message.challengeId, authorId: creatorId(message.challengeId), day: message.day, body: message.body, kind: "CREATOR_UPDATE" as const }] : [];
   });
-  return { challenges: data.challenges.map(toChallenge), creators, messages };
+  const challengerNotes: ChallengeMessage[] = (data.challengerNotes ?? []).map((note) => ({
+    id: note.id,
+    challengeId: note.challengeId,
+    authorId: `visitor-challenger-${note.id}`,
+    authorName: note.authorName,
+    day: note.day,
+    body: note.body,
+    kind: "CHALLENGER_NOTE",
+    ownedByCurrentVisitor: note.isMine,
+  }));
+  return { challenges: data.challenges.map(toChallenge), creators, messages: [...messages, ...challengerNotes] };
 }
 
-export async function saveVisitorChallenge(input: { title: string; durationDays: number; stakeName: string; firstMessage: string }) {
+export async function saveVisitorChallenge(input: { creatorName: string; title: string; durationDays: number; stakeName: string; firstMessage: string }) {
   const response = await fetch("/api/visitor-challenges", { method: "POST", headers: sessionHeaders(), body: JSON.stringify({ ...input, archiveConsent: true }) });
   if (!response.ok) throw new Error("Challenge could not be archived");
   const data = await response.json() as { challenge: VisitorChallengeDto; message: VisitorMessageDto | null };
@@ -111,4 +127,20 @@ export async function saveVisitorChallenge(input: { title: string; durationDays:
 export async function saveVisitorMessage(input: { challengeId: string; day: number; body: string }) {
   const response = await fetch("/api/visitor-messages", { method: "POST", headers: sessionHeaders(), body: JSON.stringify(input) });
   if (!response.ok) throw new Error("Message could not be archived");
+}
+
+export async function saveVisitorChallengerNote(input: { challengeId: string; authorName: string; day: number; body: string }) {
+  const response = await fetch("/api/visitor-challenger-notes", { method: "POST", headers: sessionHeaders(), body: JSON.stringify(input) });
+  if (!response.ok) throw new Error(response.status === 409 ? "A challenger message already exists for this challenge." : "Challenger message could not be archived");
+  const data = await response.json() as { note: VisitorChallengerNoteDto };
+  return {
+    id: data.note.id,
+    challengeId: data.note.challengeId,
+    authorId: `visitor-challenger-${data.note.id}`,
+    authorName: data.note.authorName,
+    day: data.note.day,
+    body: data.note.body,
+    kind: "CHALLENGER_NOTE" as const,
+    ownedByCurrentVisitor: true,
+  };
 }

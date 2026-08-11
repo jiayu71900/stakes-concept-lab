@@ -6,7 +6,7 @@ import { cleanseOneDefault, defaultMarksFor, recordDefault } from "../engine/def
 import { discoverNext } from "../engine/discoveryEngine.js";
 import { rankLeaderboard } from "../engine/leaderboardEngine.js";
 import { challengeMessages, challenges } from "../mock/demoData.js";
-import { normalizeChallengeInput, normalizeMessageInput } from "../worker/visitorArchiveApi.js";
+import { normalizeChallengeInput, normalizeChallengerNoteInput, normalizeMessageInput } from "../worker/visitorArchiveApi.js";
 
 function user(id: string, unresolvedDefaults = 0): User {
   return {
@@ -122,7 +122,7 @@ test("cleaning removes one unresolved mark without erasing history", () => {
 
 test("every playable mock challenge has realistically spaced maker updates", () => {
   for (const item of challenges) {
-    const updates = challengeMessages.filter((message) => message.challengeId === item.id);
+    const updates = challengeMessages.filter((message) => message.challengeId === item.id && message.kind === "CREATOR_UPDATE");
     assert.ok(updates.length >= 5, `${item.id} should not open with an empty update feed`);
     assert.ok(updates.every((message) => message.authorId === item.creatorId));
     assert.ok(updates.every((message) => message.day > 0 && message.day < item.durationDays));
@@ -131,21 +131,36 @@ test("every playable mock challenge has realistically spaced maker updates", () 
 });
 
 test("visitor archive requires consent, accepts bounded content, and rejects links or invalid days", () => {
-  assert.deepEqual(normalizeChallengeInput({ title: "  Ship my public build  ", durationDays: 30, stakeName: "Nintendo Switch", firstMessage: "Scope locked.", archiveConsent: true }), {
+  assert.deepEqual(normalizeChallengeInput({ creatorName: "  River  ", title: "  Ship my public build  ", durationDays: 30, stakeName: "Nintendo Switch", firstMessage: "Scope locked.", archiveConsent: true }), {
+    creatorName: "River",
     title: "Ship my public build",
     durationDays: 30,
     stakeName: "Nintendo Switch",
     firstMessage: "Scope locked.",
   });
-  assert.equal(normalizeChallengeInput({ title: "Ship a build", durationDays: 30, stakeName: "Phone", archiveConsent: false }), null);
-  assert.equal(normalizeChallengeInput({ title: "Visit https://spam.example", durationDays: 30, stakeName: "Phone", archiveConsent: true }), null);
-  assert.equal(normalizeChallengeInput({ title: "Ship a build", durationDays: 365, stakeName: "Phone", archiveConsent: true }), null);
+  assert.equal(normalizeChallengeInput({ creatorName: "River", title: "Ship a build", durationDays: 30, stakeName: "Phone", archiveConsent: false }), null);
+  assert.equal(normalizeChallengeInput({ creatorName: "River", title: "Visit https://spam.example", durationDays: 30, stakeName: "Phone", archiveConsent: true }), null);
+  assert.equal(normalizeChallengeInput({ creatorName: "River", title: "Ship a build", durationDays: 365, stakeName: "Phone", archiveConsent: true }), null);
   assert.deepEqual(normalizeMessageInput({ challengeId: "visitor-12345678", day: 5, body: "First rough build is live." }), {
     challengeId: "visitor-12345678",
     day: 5,
     body: "First rough build is live.",
   });
   assert.equal(normalizeMessageInput({ challengeId: "visitor-12345678", day: 0, body: "Too early" }), null);
+  assert.deepEqual(normalizeChallengerNoteInput({ challengeId: "steam-deck", authorName: " Lena ", day: 17, body: " I still think you can ship this. " }), {
+    challengeId: "steam-deck",
+    authorName: "Lena",
+    day: 17,
+    body: "I still think you can ship this.",
+  });
+  assert.equal(normalizeChallengerNoteInput({ challengeId: "steam-deck", authorName: "Lena", day: 61, body: "Too late" }), null);
+});
+
+test("historical challenger messages are named, dated, and limited to one per challenger fixture", () => {
+  const challengerNotes = challengeMessages.filter((message) => message.kind === "CHALLENGER_NOTE");
+  assert.ok(challengerNotes.length >= 3);
+  assert.ok(challengerNotes.every((message) => message.authorName && message.day >= 1 && message.body.length > 0));
+  assert.equal(new Set(challengerNotes.map((message) => `${message.challengeId}:${message.authorId}`)).size, challengerNotes.length);
 });
 
 test("an unresolved default removes every pact by that maker from leaderboards", () => {

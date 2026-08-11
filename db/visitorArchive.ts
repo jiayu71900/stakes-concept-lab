@@ -1,4 +1,7 @@
 import {
+  visitorChallengerNotesChallengeIndex,
+  visitorChallengerNotesOwnerIndex,
+  visitorChallengerNotesSchema,
   visitorChallengesOwnerIndex,
   visitorChallengesSchema,
   visitorChallengesVisibleIndex,
@@ -44,6 +47,17 @@ export interface VisitorMessageRow {
   status: string;
 }
 
+export interface VisitorChallengerNoteRow {
+  id: string;
+  challenge_id: string;
+  owner_hash: string;
+  author_alias: string;
+  day: number;
+  body: string;
+  created_at: string;
+  status: string;
+}
+
 export async function ensureVisitorArchive(db: D1Database) {
   await db.batch([
     db.prepare(visitorChallengesSchema),
@@ -51,6 +65,9 @@ export async function ensureVisitorArchive(db: D1Database) {
     db.prepare(visitorChallengesVisibleIndex),
     db.prepare(visitorMessagesChallengeIndex),
     db.prepare(visitorChallengesOwnerIndex),
+    db.prepare(visitorChallengerNotesSchema),
+    db.prepare(visitorChallengerNotesChallengeIndex),
+    db.prepare(visitorChallengerNotesOwnerIndex),
   ]);
 }
 
@@ -64,17 +81,21 @@ export async function listVisitorArchive(db: D1Database, limit = 24) {
     LIMIT ?
   `).bind(safeLimit).all<Omit<VisitorChallengeRow, "owner_hash" | "status">>();
   const challenges = challengeResult.results ?? [];
-  if (challenges.length === 0) return { challenges: [], messages: [] };
+  const messageResult = challenges.length === 0 ? { results: [] } : await db.prepare(`
+      SELECT id, challenge_id, day, body, created_at
+      FROM visitor_messages
+      WHERE status = 'visible' AND challenge_id IN (${challenges.map(() => "?").join(", ")})
+      ORDER BY challenge_id, day
+    `).bind(...challenges.map((challenge) => challenge.id)).all<Omit<VisitorMessageRow, "owner_hash" | "status">>();
+  const challengerNoteResult = await db.prepare(`
+    SELECT id, challenge_id, owner_hash, author_alias, day, body, created_at
+    FROM visitor_challenger_notes
+    WHERE status = 'visible'
+    ORDER BY created_at DESC
+    LIMIT 80
+  `).all<Omit<VisitorChallengerNoteRow, "status">>();
 
-  const placeholders = challenges.map(() => "?").join(", ");
-  const messageResult = await db.prepare(`
-    SELECT id, challenge_id, day, body, created_at
-    FROM visitor_messages
-    WHERE status = 'visible' AND challenge_id IN (${placeholders})
-    ORDER BY challenge_id, day
-  `).bind(...challenges.map((challenge) => challenge.id)).all<Omit<VisitorMessageRow, "owner_hash" | "status">>();
-
-  return { challenges, messages: messageResult.results ?? [] };
+  return { challenges, messages: messageResult.results ?? [], challengerNotes: challengerNoteResult.results ?? [] };
 }
 
 export async function countRecentChallengesForOwner(db: D1Database, ownerHash: string, since: string) {
@@ -110,4 +131,20 @@ export async function insertVisitorMessage(db: D1Database, message: VisitorMessa
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).bind(message.id, message.challenge_id, message.owner_hash, message.day, message.body, message.created_at, message.status).run();
   return true;
+}
+
+export async function countRecentChallengerNotesForOwner(db: D1Database, ownerHash: string, since: string) {
+  const row = await db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM visitor_challenger_notes
+    WHERE owner_hash = ? AND created_at >= ?
+  `).bind(ownerHash, since).first<{ count: number }>();
+  return Number(row?.count ?? 0);
+}
+
+export async function insertVisitorChallengerNote(db: D1Database, note: VisitorChallengerNoteRow) {
+  await db.prepare(`
+    INSERT INTO visitor_challenger_notes (id, challenge_id, owner_hash, author_alias, day, body, created_at, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(note.id, note.challenge_id, note.owner_hash, note.author_alias, note.day, note.body, note.created_at, note.status).run();
 }

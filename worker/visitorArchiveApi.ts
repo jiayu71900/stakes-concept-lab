@@ -1,11 +1,14 @@
 import {
+  countRecentChallengerNotesForOwner,
   countRecentChallengesForOwner,
   ensureVisitorArchive,
+  insertVisitorChallengerNote,
   insertVisitorChallenge,
   insertVisitorMessage,
   listVisitorArchive,
   type D1Database,
   type VisitorChallengeRow,
+  type VisitorChallengerNoteRow,
   type VisitorMessageRow,
 } from "../db/visitorArchive.js";
 
@@ -33,10 +36,11 @@ export function normalizeChallengeInput(value: unknown) {
   const title = cleanText(input.title, 72);
   const stakeName = cleanText(input.stakeName, 48);
   const firstMessage = cleanText(input.firstMessage, 180);
+  const creatorName = cleanText(input.creatorName, 24);
   const durationDays = Number(input.durationDays);
-  if (input.archiveConsent !== true || title.length < 4 || stakeName.length < 2 || !durations.has(durationDays)) return null;
-  if (containsLink(title) || containsLink(stakeName) || containsLink(firstMessage)) return null;
-  return { title, stakeName, firstMessage, durationDays };
+  if (input.archiveConsent !== true || creatorName.length < 2 || title.length < 4 || stakeName.length < 2 || !durations.has(durationDays)) return null;
+  if (containsLink(creatorName) || containsLink(title) || containsLink(stakeName) || containsLink(firstMessage)) return null;
+  return { creatorName, title, stakeName, firstMessage, durationDays };
 }
 
 export function normalizeMessageInput(value: unknown) {
@@ -47,6 +51,17 @@ export function normalizeMessageInput(value: unknown) {
   if (!challengeId.startsWith("visitor-") || body.length < 2 || !Number.isInteger(day) || day < 1 || day > 60) return null;
   if (containsLink(body)) return null;
   return { challengeId, body, day };
+}
+
+export function normalizeChallengerNoteInput(value: unknown) {
+  const input = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
+  const challengeId = cleanText(input.challengeId, 80);
+  const authorName = cleanText(input.authorName, 24);
+  const body = cleanText(input.body, 180);
+  const day = Number(input.day);
+  if (!challengeId || authorName.length < 2 || body.length < 2 || !Number.isInteger(day) || day < 1 || day > 60) return null;
+  if (containsLink(authorName) || containsLink(body)) return null;
+  return { challengeId, authorName, body, day };
 }
 
 async function ownerHash(request: Request) {
@@ -71,6 +86,7 @@ export async function handleVisitorArchiveRequest(request: Request, db?: D1Datab
 
   if (url.pathname === "/api/visitor-challenges" && request.method === "GET") {
     const archive = await listVisitorArchive(db, Number(url.searchParams.get("limit") ?? 24));
+    const currentOwner = await ownerHash(request);
     return json({
       challenges: archive.challenges.map((challenge) => ({
         id: challenge.id,
@@ -86,6 +102,15 @@ export async function handleVisitorArchiveRequest(request: Request, db?: D1Datab
         day: message.day,
         body: message.body,
         createdAt: message.created_at,
+      })),
+      challengerNotes: archive.challengerNotes.map((note) => ({
+        id: note.id,
+        challengeId: note.challenge_id,
+        authorName: note.author_alias,
+        day: note.day,
+        body: note.body,
+        createdAt: note.created_at,
+        isMine: currentOwner === note.owner_hash,
       })),
     });
   }
@@ -104,7 +129,7 @@ export async function handleVisitorArchiveRequest(request: Request, db?: D1Datab
     const challenge: VisitorChallengeRow = {
       id,
       owner_hash: owner,
-      creator_alias: `Visitor ${id.slice(-4).toUpperCase()}`,
+      creator_alias: input.creatorName,
       title: input.title,
       duration_days: input.durationDays,
       stake_name: input.stakeName,
@@ -142,6 +167,29 @@ export async function handleVisitorArchiveRequest(request: Request, db?: D1Datab
       return json({ error: "One update is allowed for this challenge day." }, 409);
     }
     return json({ message: { id: message.id, challengeId: message.challenge_id, day: message.day, body: message.body, createdAt: message.created_at } }, 201);
+  }
+
+  if (url.pathname === "/api/visitor-challenger-notes" && request.method === "POST") {
+    const input = normalizeChallengerNoteInput(await readBody(request));
+    if (!input) return json({ error: "Challenger note is incomplete or unsupported." }, 400);
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    if (await countRecentChallengerNotesForOwner(db, owner, since) >= 10) return json({ error: "Daily challenger note limit reached." }, 429);
+    const note: VisitorChallengerNoteRow = {
+      id: `visitor-challenger-note-${crypto.randomUUID()}`,
+      challenge_id: input.challengeId,
+      owner_hash: owner,
+      author_alias: input.authorName,
+      day: input.day,
+      body: input.body,
+      created_at: new Date().toISOString(),
+      status: "visible",
+    };
+    try {
+      await insertVisitorChallengerNote(db, note);
+    } catch {
+      return json({ error: "One challenger message is allowed for this challenge." }, 409);
+    }
+    return json({ note: { id: note.id, challengeId: note.challenge_id, authorName: note.author_alias, day: note.day, body: note.body, createdAt: note.created_at, isMine: true } }, 201);
   }
 
   return json({ error: "Not found." }, 404);
