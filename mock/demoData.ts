@@ -1,4 +1,4 @@
-import type { Challenge, DemoState, User } from "@/domain/models";
+import type { Challenge, ChallengeMessage, DemoState, User } from "../domain/models.js";
 
 export const viewer: User = {
   id: "you",
@@ -175,6 +175,33 @@ export const challenges: Challenge[] = [
   },
 ];
 
+export const challengeMessages: ChallengeMessage[] = [
+  { id: "msg-steam-1", challengeId: "steam-deck", authorId: "jiayu", day: 1, body: "Cut the scope in half. The tiny version might actually ship.", kind: "CREATOR_UPDATE" },
+  { id: "msg-steam-5", challengeId: "steam-deck", authorId: "jiayu", day: 5, body: "First playable loop is ugly, but it is finally a loop.", kind: "CREATOR_UPDATE" },
+  { id: "msg-steam-11", challengeId: "steam-deck", authorId: "jiayu", day: 11, body: "Sent a build to two friends. One found the fun; both found the same crash.", kind: "CREATOR_UPDATE" },
+  { id: "msg-steam-18", challengeId: "steam-deck", authorId: "jiayu", day: 18, body: "Boss fight works. Save system does not. Slight concern.", kind: "CREATOR_UPDATE" },
+  { id: "msg-steam-25", challengeId: "steam-deck", authorId: "jiayu", day: 25, body: "Five days left. Cut multiplayer and three nice-to-haves. It hurts less than losing the Deck.", kind: "CREATOR_UPDATE" },
+  { id: "msg-steam-29", challengeId: "steam-deck", authorId: "jiayu", day: 29, body: "Lost most of today to a corrupted save. One night left. Not making promises in this update.", kind: "CREATOR_UPDATE" },
+  { id: "msg-kiln-2", challengeId: "kiln", authorId: "mina", day: 2, body: "Clay ordered. Twelve pieces sounded reasonable before I wrote the number down.", kind: "CREATOR_UPDATE" },
+  { id: "msg-kiln-8", challengeId: "kiln", authorId: "mina", day: 8, body: "Three forms survived trimming. One became a very expensive practice bowl.", kind: "CREATOR_UPDATE" },
+  { id: "msg-kiln-17", challengeId: "kiln", authorId: "mina", day: 17, body: "Venue confirmed the wall length. I need two more tall pieces than planned.", kind: "CREATOR_UPDATE" },
+  { id: "msg-kiln-27", challengeId: "kiln", authorId: "mina", day: 27, body: "First firing opened clean. The blue glaze did something completely different and I may keep it.", kind: "CREATOR_UPDATE" },
+  { id: "msg-kiln-38", challengeId: "kiln", authorId: "mina", day: 38, body: "Ten finished. Two drying. Invitations are now real enough to make me nervous.", kind: "CREATOR_UPDATE" },
+  { id: "msg-kiln-44", challengeId: "kiln", authorId: "mina", day: 44, body: "Everything is wrapped by the door. Tomorrow this stops being a studio problem.", kind: "CREATOR_UPDATE" },
+  { id: "msg-startup-1", challengeId: "startup", authorId: "dev", day: 1, body: "Deleted the waitlist. The next person has to be able to pay, not just leave an email.", kind: "CREATOR_UPDATE" },
+  { id: "msg-startup-4", challengeId: "startup", authorId: "dev", day: 4, body: "Billing works in test mode. Production still thinks my company does not exist.", kind: "CREATOR_UPDATE" },
+  { id: "msg-startup-9", challengeId: "startup", authorId: "dev", day: 9, body: "First customer paid after a fifteen-minute screen share and three apology emails.", kind: "CREATOR_UPDATE" },
+  { id: "msg-startup-14", challengeId: "startup", authorId: "dev", day: 14, body: "Four customers. Onboarding is now the bottleneck instead of the product.", kind: "CREATOR_UPDATE" },
+  { id: "msg-startup-18", challengeId: "startup", authorId: "dev", day: 18, body: "Seven receipts. Lowered the price instead of pretending the objections were philosophical.", kind: "CREATOR_UPDATE" },
+  { id: "msg-startup-20", challengeId: "startup", authorId: "dev", day: 20, body: "Nine. One day left. The tenth conversation is booked for 8 a.m.", kind: "CREATOR_UPDATE" },
+  { id: "msg-run-3", challengeId: "half-marathon", authorId: "noor", day: 3, body: "First easy run was not easy. At least the watch recorded the humiliation accurately.", kind: "CREATOR_UPDATE" },
+  { id: "msg-run-11", challengeId: "half-marathon", authorId: "noor", day: 11, body: "Eight kilometres without stopping. Slower than planned, calmer than last week.", kind: "CREATOR_UPDATE" },
+  { id: "msg-run-22", challengeId: "half-marathon", authorId: "noor", day: 22, body: "Skipped one run for a sore ankle. Posting that here so I cannot rewrite the week later.", kind: "CREATOR_UPDATE" },
+  { id: "msg-run-34", challengeId: "half-marathon", authorId: "noor", day: 34, body: "Longest run: sixteen kilometres. The final five are still theoretical.", kind: "CREATOR_UPDATE" },
+  { id: "msg-run-47", challengeId: "half-marathon", authorId: "noor", day: 47, body: "Taper started. I have more energy and nowhere useful to put it.", kind: "CREATOR_UPDATE" },
+  { id: "msg-run-55", challengeId: "half-marathon", authorId: "noor", day: 55, body: "Bib pinned. Alarm set. Tomorrow the watch does not get to die.", kind: "CREATOR_UPDATE" },
+];
+
 export function createInitialDemoState(): DemoState {
   return {
     creator: { ...jiayu },
@@ -185,14 +212,7 @@ export function createInitialDemoState(): DemoState {
     createdChallenge: false,
     defaultRecords: [],
     simulatedDay: 0,
-    messages: [
-      { id: "msg-steam-1", challengeId: "steam-deck", authorId: "jiayu", day: 1, body: "Cut the scope in half. The tiny version might actually ship.", kind: "CREATOR_UPDATE" },
-      { id: "msg-steam-5", challengeId: "steam-deck", authorId: "jiayu", day: 5, body: "First playable loop is ugly, but it is finally a loop.", kind: "CREATOR_UPDATE" },
-      { id: "msg-steam-11", challengeId: "steam-deck", authorId: "jiayu", day: 11, body: "Sent a build to two friends. One found the fun; both found the same crash.", kind: "CREATOR_UPDATE" },
-      { id: "msg-steam-18", challengeId: "steam-deck", authorId: "jiayu", day: 18, body: "Boss fight works. Save system does not. Slight concern.", kind: "CREATOR_UPDATE" },
-      { id: "msg-steam-25", challengeId: "steam-deck", authorId: "jiayu", day: 25, body: "Five days left. Cut multiplayer and three nice-to-haves. It hurts less than losing the Deck.", kind: "CREATOR_UPDATE" },
-      { id: "msg-steam-29", challengeId: "steam-deck", authorId: "jiayu", day: 29, body: "Lost most of today to a corrupted save. One night left. Not making promises in this update.", kind: "CREATOR_UPDATE" },
-    ],
+    messages: structuredClone(challengeMessages),
     lastEvent: "READY",
   };
 }

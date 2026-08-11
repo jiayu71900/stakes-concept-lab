@@ -5,6 +5,7 @@ import { advanceThrough, transitionChallenge } from "../engine/challengeStateMac
 import { cleanseOneDefault, defaultMarksFor, recordDefault } from "../engine/defaultEngine.js";
 import { discoverNext } from "../engine/discoveryEngine.js";
 import { rankLeaderboard } from "../engine/leaderboardEngine.js";
+import { challengeMessages, challenges } from "../mock/demoData.js";
 
 function user(id: string, unresolvedDefaults = 0): User {
   return {
@@ -85,8 +86,27 @@ test("highest-stakes defaults add ten marks while ordinary defaults add one", ()
   const result = recordDefault(maker, challenger, highest);
   assert.equal(result.debtor.unresolvedDefaults, 10);
   assert.equal(result.debtor.historicalDefaults, 10);
+  assert.equal(result.creditor.unresolvedDefaults, 0);
+  assert.equal(result.creditor.defaultsReceived, 1);
+  assert.equal(result.cleanedMarks, 0);
   assert.equal(result.record.marks, 10);
   assert.equal(maker.unresolvedDefaults, 0, "recording must not mutate its input");
+});
+
+test("a maker default adds marks to the maker and cleans one mark from a marked challenger", () => {
+  const ordinary = challenge("ordinary", "maker", 100);
+  const maker = user("maker");
+  const markedChallenger = { ...user("challenger", 1), historicalDefaults: 1 };
+
+  const result = recordDefault(maker, markedChallenger, ordinary);
+
+  assert.equal(result.debtor.unresolvedDefaults, 1);
+  assert.equal(result.creditor.unresolvedDefaults, 0);
+  assert.equal(result.creditor.historicalDefaults, 1);
+  assert.equal(result.creditor.defaultsReceived, 1);
+  assert.equal(result.cleanedMarks, 1);
+  assert.equal(result.record.debtorId, maker.id);
+  assert.equal(result.record.creditorId, markedChallenger.id);
 });
 
 test("cleaning removes one unresolved mark without erasing history", () => {
@@ -97,6 +117,16 @@ test("cleaning removes one unresolved mark without erasing history", () => {
   assert.equal(cleaned.historicalDefaults, 14);
   assert.equal(cleaned.defaultsReceived, 1);
   assert.equal(cleanseOneDefault(user("clear")).unresolvedDefaults, 0);
+});
+
+test("every playable mock challenge has realistically spaced maker updates", () => {
+  for (const item of challenges) {
+    const updates = challengeMessages.filter((message) => message.challengeId === item.id);
+    assert.ok(updates.length >= 5, `${item.id} should not open with an empty update feed`);
+    assert.ok(updates.every((message) => message.authorId === item.creatorId));
+    assert.ok(updates.every((message) => message.day > 0 && message.day < item.durationDays));
+    assert.deepEqual(updates.map((message) => message.day), updates.map((message) => message.day).toSorted((a, b) => a - b));
+  }
 });
 
 test("an unresolved default removes every pact by that maker from leaderboards", () => {

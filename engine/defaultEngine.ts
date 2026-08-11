@@ -8,8 +8,9 @@ export function recordDefault(
   debtor: User,
   creditor: User,
   challenge: Challenge,
-): { debtor: User; record: DefaultRecord } {
+): { debtor: User; creditor: User; cleanedMarks: number; record: DefaultRecord } {
   const marks = defaultMarksFor(challenge);
+  const cleanedMarks = creditor.unresolvedDefaults > 0 ? 1 : 0;
 
   return {
     debtor: {
@@ -17,6 +18,8 @@ export function recordDefault(
       unresolvedDefaults: debtor.unresolvedDefaults + marks,
       historicalDefaults: debtor.historicalDefaults + marks,
     },
+    creditor: cleanseOneDefault(creditor),
+    cleanedMarks,
     record: {
       id: `default-${challenge.id}-${Date.now()}`,
       challengeId: challenge.id,

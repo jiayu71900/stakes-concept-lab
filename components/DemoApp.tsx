@@ -10,7 +10,7 @@ import { recordDefault } from "@/engine/defaultEngine";
 import { rankLeaderboard } from "@/engine/leaderboardEngine";
 
 type DemoView = "discover" | "challenge" | "match" | "outcome" | "profile" | "lab";
-const STORAGE_KEY = "bet-i-do-demo-v3";
+const STORAGE_KEY = "bet-i-do-demo-v4";
 const REPOSITORY_URL = "https://github.com/jiayu71900/stakes-concept-lab";
 const DISCUSSION_URLS = {
   firstImpressions: `${REPOSITORY_URL}/discussions/new?category=first-impressions`,
@@ -82,8 +82,17 @@ function createStateForView(view: DemoView): DemoState {
   return {
     ...failedState,
     creator: defaulted.debtor,
+    viewer: defaulted.creditor,
     featured: transitionChallenge(failedState.featured, "DEFAULTED"),
     defaultRecords: [defaulted.record],
+    lastDefaultSettlement: {
+      debtorId: defaulted.debtor.id,
+      creditorId: defaulted.creditor.id,
+      debtorMarksAdded: defaulted.record.marks,
+      creditorMarksBefore: failedState.viewer.unresolvedDefaults,
+      creditorMarksAfter: defaulted.creditor.unresolvedDefaults,
+      cleanedMarks: defaulted.cleanedMarks,
+    },
     lastEvent: "DEFAULTED",
   };
 }
@@ -97,6 +106,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   const [copiedBrief, setCopiedBrief] = useState<string | null>(null);
   const [createIdentityId, setCreateIdentityId] = useState("you");
   const [publisherMode, setPublisherMode] = useState(false);
+  const [profileIdentityId, setProfileIdentityId] = useState<string | null>(null);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -180,7 +190,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
       watchers: 0,
     };
     const opened = transitionChallenge(draft, "OPEN");
-    setState((current) => ({ ...current, creator: identity, featured: opened, joined: false, simulatedDay: 0, messages: [], createdChallenge: true, lastEvent: "CREATED" }));
+    setState((current) => ({ ...current, creator: identity, featured: opened, joined: false, simulatedDay: 0, createdChallenge: true, lastEvent: "CREATED" }));
     setPublisherMode(true);
     setShowCreatedToast(true);
     setCreateOpen(false);
@@ -298,8 +308,17 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
       return {
         ...current,
         creator: result.debtor,
+        viewer: result.creditor,
         featured: transitionChallenge(current.featured, "DEFAULTED"),
         defaultRecords: [...current.defaultRecords, result.record],
+        lastDefaultSettlement: {
+          debtorId: result.debtor.id,
+          creditorId: result.creditor.id,
+          debtorMarksAdded: result.record.marks,
+          creditorMarksBefore: current.viewer.unresolvedDefaults,
+          creditorMarksAfter: result.creditor.unresolvedDefaults,
+          cleanedMarks: result.cleanedMarks,
+        },
         lastEvent: "DEFAULTED",
       };
     });
@@ -312,24 +331,34 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     navigate("discover");
   };
 
-  const challengeAsProfile = () => {
+  const challengeAsProfile = (identity: User) => {
     setState((current) => {
-      const identity = { ...current.creator };
+      const base = createInitialDemoState();
       const nextIndex = challenges.findIndex((challenge) => challenge.creatorId !== identity.id);
       const discoveryIndex = nextIndex >= 0 ? nextIndex : 0;
       const nextChallenge = structuredClone(challenges[discoveryIndex]);
+      const seededMessageIds = new Set(base.messages.map((message) => message.id));
       return {
-        ...createInitialDemoState(),
-        viewer: identity,
+        ...base,
+        viewer: { ...identity },
         creator: { ...creatorFor(nextChallenge) },
         featured: nextChallenge,
         discoveryIndex,
         defaultRecords: current.defaultRecords,
+        messages: [...base.messages, ...current.messages.filter((message) => !seededMessageIds.has(message.id))],
         lastEvent: "READY",
       };
     });
+    setProfileIdentityId(null);
     navigate("discover");
   };
+
+  const openProfile = (identityId: string) => {
+    setProfileIdentityId(identityId);
+    navigate("profile");
+  };
+
+  const profileIdentity = profileIdentityId === state.viewer.id ? state.viewer : state.creator;
 
   const copyBrief = async (title: string, brief: string) => {
     await navigator.clipboard.writeText(`BET I DO. contribution brief — ${title}\n\n${brief}`);
@@ -365,8 +394,8 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
         publisherMode ? <PublisherChallengePage challenge={state.featured} creator={state.creator} onViewPublic={() => setPublisherMode(false)} /> : <ChallengePage challenge={state.featured} creatorName={state.creator.displayName} joined={state.joined} onJoin={joinChallenge} onSelect={simulateSelection} />
       )}
       {view === "match" && <MatchPage state={state} onStart={startChallenge} onAdvance={advanceDays} onResolve={resolveChallenge} onPostMessage={postDailyMessage} />}
-      {view === "outcome" && <OutcomePage state={state} onDefault={simulateDefault} onShip={simulateShipment} onProfile={() => navigate("profile")} />}
-      {view === "profile" && <ProfilePage state={state} onPublishAs={() => { setCreateIdentityId(state.creator.id); setCreateOpen(true); }} onChallengeAs={challengeAsProfile} />}
+      {view === "outcome" && <OutcomePage state={state} onDefault={simulateDefault} onShip={simulateShipment} onProfile={openProfile} />}
+      {view === "profile" && <ProfilePage state={state} user={profileIdentity} onPublishAs={(identity) => { setCreateIdentityId(identity.id); setCreateOpen(true); }} onChallengeAs={challengeAsProfile} />}
       {view === "lab" && <LabPage copiedBrief={copiedBrief} onCopy={copyBrief} />}
 
       <footer className="footer">
@@ -572,33 +601,51 @@ function MatchPage({ state, onStart, onAdvance, onResolve, onPostMessage }: {
   );
 }
 
-function OutcomePage({ state, onDefault, onShip, onProfile }: { state: DemoState; onDefault: () => void; onShip: () => void; onProfile: () => void }) {
+function OutcomePage({ state, onDefault, onShip, onProfile }: { state: DemoState; onDefault: () => void; onShip: () => void; onProfile: (identityId: string) => void }) {
   const resolved = state.featured.state === "DEFAULTED" || state.featured.state === "SHIPPED";
   const defaulted = state.featured.state === "DEFAULTED";
   const marks = state.featured.leaderboardPlacement?.board === "highest_stakes" ? 10 : 1;
+  const settlement = state.lastDefaultSettlement;
   return (
     <div className="page-wrap outcome-page">
       <div className="outcome-title"><p className="eyebrow">LOST THE BET</p><span className="failed-word">FAILED</span><h1>{state.creator.displayName} missed the deadline.</h1></div>
       {!resolved ? (
         <div className="shipment-card"><div className="shipment-clock"><span>72</span><small>HOURS TO<br />ADD TRACKING</small></div><div className="shipment-copy"><p className="eyebrow">NOW THE STAKE MOVES</p><h2>{state.featured.stake.itemName}<br />→ You</h2><p>The platform doesn’t hold the item. {state.creator.displayName} must ship it directly—or carry the mark.</p><div className="outcome-actions"><button className="primary-action" onClick={onShip}>ADD TRACKING <span>✓</span></button><button className="default-button" onClick={onDefault}>LET 72H EXPIRE <span>+{marks}</span></button></div></div></div>
+      ) : defaulted ? (
+        <div className="resolution-card is-default">
+          <span className="resolution-kicker">UNPAID BET +{settlement?.debtorMarksAdded ?? marks}</span>
+          <h2>One default. Two different consequences.</h2>
+          <p>{state.creator.displayName} receives the new mark. {state.viewer.displayName} received the default{settlement?.cleanedMarks ? " and cleans one unresolved mark" : " without gaining a mark"}.</p>
+          <div className="settlement-ledger">
+            <div><small>MAKER · DEFAULTED</small><strong>{state.creator.displayName}</strong><span>+{settlement?.debtorMarksAdded ?? marks} unresolved</span></div>
+            <div className={settlement?.cleanedMarks ? "is-cleaned" : ""}><small>SELECTED CHALLENGER · RECEIVED DEFAULT</small><strong>{state.viewer.displayName}</strong><span>{settlement?.creditorMarksBefore ?? state.viewer.unresolvedDefaults} → {settlement?.creditorMarksAfter ?? state.viewer.unresolvedDefaults} unresolved</span></div>
+          </div>
+          <div className="resolution-profile-actions">
+            <button className="dark-action" onClick={() => onProfile(state.creator.id)}>SEE {state.creator.displayName.toUpperCase()}’S NEW MARK <span>→</span></button>
+            {!!settlement?.cleanedMarks && <button className="dark-action light-action" onClick={() => onProfile(state.viewer.id)}>RETURN TO {state.viewer.displayName.toUpperCase()} <span>→</span></button>}
+          </div>
+        </div>
       ) : (
-        <div className={`resolution-card ${defaulted ? "is-default" : "is-shipped"}`}><span className="resolution-kicker">{defaulted ? `UNPAID BET +${marks}` : "PAID UP · TRACKING ADDED"}</span><h2>{defaulted ? "The bet stays. So does the mark." : "The stake is moving."}</h2><p>{defaulted ? `${state.creator.displayName} keeps their identity and history. The next thing they do will carry this mark with it.` : `The ${state.featured.stake.itemName} is on its way to you. No default was recorded.`}</p><button className="dark-action" onClick={onProfile}>SEE {state.creator.displayName.toUpperCase()}’S PROFILE <span>→</span></button></div>
+        <div className="resolution-card is-shipped"><span className="resolution-kicker">PAID UP · TRACKING ADDED</span><h2>The stake is moving.</h2><p>The {state.featured.stake.itemName} is on its way to {state.viewer.displayName}. No default was recorded.</p><button className="dark-action" onClick={() => onProfile(state.creator.id)}>SEE {state.creator.displayName.toUpperCase()}’S PROFILE <span>→</span></button></div>
       )}
       <aside className="rule-strip"><b>RULE 04</b> Default is a visible consequence, not a ban.</aside>
     </div>
   );
 }
 
-function ProfilePage({ state, onPublishAs, onChallengeAs }: { state: DemoState; onPublishAs: () => void; onChallengeAs: () => void }) {
-  const marked = state.creator.unresolvedDefaults > 0;
+function ProfilePage({ state, user, onPublishAs, onChallengeAs }: { state: DemoState; user: User; onPublishAs: (identity: User) => void; onChallengeAs: (identity: User) => void }) {
+  const marked = user.unresolvedDefaults > 0;
+  const settlement = state.lastDefaultSettlement;
+  const justCleaned = settlement?.creditorId === user.id && settlement.cleanedMarks > 0;
   return (
     <div className="page-wrap profile-page">
-      <section className="profile-head"><div className="profile-avatar">{state.creator.avatar}</div><div><p className="eyebrow">PUBLIC PROFILE</p><h1>{state.creator.displayName}</h1><p>{state.creator.handle} · {state.creator.bio}</p></div><div className={`default-counter ${marked ? "marked" : "clear"}`}><span>{state.creator.unresolvedDefaults}</span><strong>UNRESOLVED<br />DEFAULT{state.creator.unresolvedDefaults === 1 ? "" : "S"}</strong></div></section>
+      {justCleaned && <section className="cleansed-banner"><div><span>DEFAULT RECEIVED</span><strong>One unresolved mark was cleaned.</strong></div><div className="zero-change"><span>{settlement.creditorMarksBefore}</span> → {settlement.creditorMarksAfter}</div></section>}
+      <section className="profile-head"><div className="profile-avatar">{user.avatar}</div><div><p className="eyebrow">PUBLIC PROFILE</p><h1>{user.displayName}</h1><p>{user.handle} · {user.bio}</p></div><div className={`default-counter ${marked ? "marked" : "clear"}`}><span>{user.unresolvedDefaults}</span><strong>UNRESOLVED<br />DEFAULT{user.unresolvedDefaults === 1 ? "" : "S"}</strong></div></section>
       <section className="profile-grid">
-        <div className="profile-panel aftermath-panel"><p className="eyebrow">WHAT HAPPENS NEXT</p><h2>{marked ? "The identity remains." : "No unresolved marks."}</h2><p>The ledger is public, but the profile is not frozen. Continue as this person and notice where the mark quietly follows.</p><div className="identity-actions"><button className="giant-action" onClick={onPublishAs}>PUBLISH AS {state.creator.displayName.toUpperCase()} <span>→</span></button><button className="giant-action secondary-identity-action" onClick={onChallengeAs}>CHALLENGE AS {state.creator.displayName.toUpperCase()} <span>→</span></button></div><small className="identity-action-note">Both paths stay open. The unresolved mark travels with this identity.</small><a className="discussion-link" href={DISCUSSION_URLS.breakRule} target="_blank" rel="noreferrer">FOUND A LOOPHOLE? OPEN THE RULE ↗</a></div>
+        <div className="profile-panel aftermath-panel"><p className="eyebrow">WHAT HAPPENS NEXT</p><h2>{marked ? "The identity remains." : justCleaned ? "The history remains. The mark does not." : "No unresolved marks."}</h2><p>The ledger is public, but the profile is not frozen. Continue as this person and notice where the mark quietly follows.</p><div className="identity-actions"><button className="giant-action" onClick={() => onPublishAs(user)}>PUBLISH AS {user.displayName.toUpperCase()} <span>→</span></button><button className="giant-action secondary-identity-action" onClick={() => onChallengeAs(user)}>CHALLENGE AS {user.displayName.toUpperCase()} <span>→</span></button></div><small className="identity-action-note">Both paths stay open. Unresolved marks travel with the identity; cleaned marks remain only in history.</small><a className="discussion-link" href={DISCUSSION_URLS.breakRule} target="_blank" rel="noreferrer">FOUND A LOOPHOLE? OPEN THE RULE ↗</a></div>
         <div className="cleansing-panel rules-only"><p className="eyebrow">CLEANING RULE</p><h2>Repayment happens from the other side.</h2><ol><li><b>01</b><span>This user must later be drawn as someone else’s challenger.</span></li><li><b>02</b><span>That maker must fail and default on this user.</span></li><li><b>03</b><span>One unresolved mark is then cleared. A +10 mark takes ten qualifying defaults.</span></li></ol><p>Marks never fall below zero. Historical defaults remain visible after cleaning.</p></div>
       </section>
-      <section className="ledger"><div><span>{state.creator.historicalDefaults}</span><small>historical defaults</small></div><div><span>{state.creator.defaultsReceived}</span><small>defaults received</small></div><div><span>{state.creator.unresolvedDefaults}</span><small>unresolved marks now</small></div></section>
+      <section className="ledger"><div><span>{user.historicalDefaults}</span><small>historical defaults</small></div><div><span>{user.defaultsReceived}</span><small>defaults received</small></div><div><span>{user.unresolvedDefaults}</span><small>unresolved marks now</small></div></section>
     </div>
   );
 }

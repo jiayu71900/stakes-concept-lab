@@ -13,6 +13,7 @@
   "include": [
     "domain/**/*.ts",
     "engine/**/*.ts",
+    "mock/demoData.ts",
     "tests/engine-rules.test.ts"
   ]
 }

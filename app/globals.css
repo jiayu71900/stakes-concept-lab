@@ -312,6 +312,15 @@ button { color: inherit; }
 .resolution-card h2 { font: 900 clamp(42px, 6vw, 72px)/.9 Arial Black, Arial, sans-serif; letter-spacing: -.065em; text-transform: uppercase; margin: 35px 0 20px; }
 .resolution-card p { font-size: 17px; line-height: 1.5; max-width: 680px; }
 .resolution-card .dark-action { margin-top: 20px; }
+.settlement-ledger { margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; border: 1.5px solid var(--ink); background: var(--ink); gap: 1px; }
+.settlement-ledger > div { min-height: 145px; padding: 19px; background: var(--white); display: flex; flex-direction: column; }
+.settlement-ledger > div.is-cleaned { background: var(--acid); }
+.settlement-ledger small { font: 900 8px Arial, sans-serif; letter-spacing: .12em; }
+.settlement-ledger strong { margin-top: 30px; font: 900 24px Arial Black, Arial, sans-serif; text-transform: uppercase; }
+.settlement-ledger span { margin-top: auto; font: 900 12px Arial, sans-serif; }
+.resolution-profile-actions { display: flex; gap: 11px; flex-wrap: wrap; }
+.resolution-profile-actions .dark-action { flex: 1; min-width: 260px; }
+.resolution-profile-actions .light-action { background: var(--white); color: var(--ink); }
 .rule-strip { width: fit-content; margin: 48px auto 0; border-bottom: 2px solid var(--ink); padding: 0 3px 7px; font: italic 17px Georgia, serif; }
 .rule-strip b { font: 900 10px Arial, sans-serif; letter-spacing: .12em; margin-right: 10px; }
 
@@ -483,6 +492,7 @@ button { color: inherit; }
   .message-panel { border-left: 0; border-top: 2px solid var(--ink); }
   .simulation-panel, .message-panel { min-height: auto; }
   .shipment-clock { min-height: 210px; border-right: 0; border-bottom: 2px solid var(--ink); }
+  .settlement-ledger { grid-template-columns: 1fr; }
   .profile-head { grid-template-columns: 100px 1fr; }
   .default-counter { grid-column: 1 / -1; width: fit-content; }
   .publisher-next { grid-template-columns: 1fr; }
@@ -558,6 +568,8 @@ button { color: inherit; }
   .failed-word { font-size: 82px; text-shadow: 5px 5px 0 var(--ink); }
   .shipment-copy, .resolution-card { padding: 27px; }
   .resolution-card h2 { font-size: 42px; }
+  .resolution-profile-actions { flex-direction: column; }
+  .resolution-profile-actions .dark-action { min-width: 0; }
   .profile-head { grid-template-columns: 78px 1fr; gap: 16px; }
   .profile-avatar { width: 72px; height: 72px; }
   .profile-head h1 { font-size: 48px; }

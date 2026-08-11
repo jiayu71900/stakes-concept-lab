@@ -49,6 +49,15 @@ export interface DefaultRecord {
   createdAt: string;
 }
 
+export interface DefaultSettlement {
+  debtorId: string;
+  creditorId: string;
+  debtorMarksAdded: number;
+  creditorMarksBefore: number;
+  creditorMarksAfter: number;
+  cleanedMarks: number;
+}
+
 export interface LeaderboardPlacement {
   board: LeaderboardType;
   rank: number;
@@ -104,6 +113,7 @@ export interface DemoState {
   joined: boolean;
   createdChallenge: boolean;
   defaultRecords: DefaultRecord[];
+  lastDefaultSettlement?: DefaultSettlement;
   simulatedDay: number;
   messages: ChallengeMessage[];
   lastEvent:
