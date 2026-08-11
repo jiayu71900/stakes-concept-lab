@@ -5,11 +5,16 @@ export interface DiscoveryResult {
   session: DiscoverySession;
 }
 
+export interface DiscoveryOptions {
+  includeOwn?: boolean;
+}
+
 export function discoverNext(
   challenges: Challenge[],
   viewer: User,
   session: DiscoverySession,
   random: () => number = Math.random,
+  options: DiscoveryOptions = {},
 ): DiscoveryResult {
   if (session.refreshesRemaining <= 0) {
     return { challenge: null, session };
@@ -18,7 +23,7 @@ export function discoverNext(
   const eligible = challenges.filter(
     (challenge) =>
       challenge.state === "OPEN" &&
-      challenge.creatorId !== viewer.id &&
+      (options.includeOwn || challenge.creatorId !== viewer.id) &&
       !session.seenChallengeIds.includes(challenge.id),
   );
 
@@ -26,7 +31,7 @@ export function discoverNext(
     return { challenge: null, session };
   }
 
-  const challenge = eligible[Math.floor(random() * eligible.length)];
+  const challenge = eligible[Math.min(eligible.length - 1, Math.floor(random() * eligible.length))];
   return {
     challenge,
     session: {
@@ -36,17 +41,6 @@ export function discoverNext(
   };
 }
 
-export function deterministicDiscovery(
-  challenges: Challenge[],
-  currentIndex: number,
-  refreshesRemaining: number,
-) {
-  if (refreshesRemaining <= 0) {
-    return { index: currentIndex, refreshesRemaining };
-  }
-
-  return {
-    index: (currentIndex + 1) % challenges.length,
-    refreshesRemaining: refreshesRemaining - 1,
-  };
+export function canChallenge(challenge: Challenge, viewer: User) {
+  return !challenge.ownedByCurrentVisitor && challenge.creatorId !== viewer.id;
 }

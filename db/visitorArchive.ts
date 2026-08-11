@@ -74,12 +74,12 @@ export async function ensureVisitorArchive(db: D1Database) {
 export async function listVisitorArchive(db: D1Database, limit = 24) {
   const safeLimit = Math.max(1, Math.min(limit, 50));
   const challengeResult = await db.prepare(`
-    SELECT id, creator_alias, title, duration_days, stake_name, created_at
+    SELECT id, owner_hash, creator_alias, title, duration_days, stake_name, created_at
     FROM visitor_challenges
     WHERE status = 'visible'
     ORDER BY created_at DESC
     LIMIT ?
-  `).bind(safeLimit).all<Omit<VisitorChallengeRow, "owner_hash" | "status">>();
+  `).bind(safeLimit).all<Omit<VisitorChallengeRow, "status">>();
   const challenges = challengeResult.results ?? [];
   const messageResult = challenges.length === 0 ? { results: [] } : await db.prepare(`
       SELECT id, challenge_id, day, body, created_at

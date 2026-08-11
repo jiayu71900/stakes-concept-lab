@@ -70,7 +70,13 @@ test("renders the consequence path and both join affordances without simulation 
   assert.match(profile, /CHALLENGE AS[\s\S]*?A MARKED USER/);
   const source = await readFile(new URL("../components/DemoApp.tsx", import.meta.url), "utf8");
   assert.match(source, /CONTINUE AS A MARKED USER/);
-  assert.match(source, /CONTINUE AS AN UNMARKED USER/);
+  assert.match(source, /CONTINUE AS \{markedVisitorAfterShipment \? "A MARKED USER" : "AN UNMARKED USER"\}/);
+  assert.match(source, /CONTINUE · 1 MARK CLEANED/);
+  assert.match(source, /onProfile\(cleanedVisitorMark \? state\.viewer\.id : state\.creator\.id\)/);
+  assert.match(source, /LIVE IN RANDOM DISCOVER NOW/);
+  assert.match(source, /YOUR BET · WATCH-ONLY/);
+  assert.match(source, /\{ includeOwn: true \}/);
+  assert.doesNotMatch(source, /deterministicDiscovery/);
   assert.doesNotMatch(source, /PUBLISH AS \{user\.displayName\.toUpperCase\(\)\}|CHALLENGE AS \{user\.displayName\.toUpperCase\(\)\}/);
   assert.match(profile, /CLEANING RULE/);
   assert.match(profile, /FOUND A LOOPHOLE/);

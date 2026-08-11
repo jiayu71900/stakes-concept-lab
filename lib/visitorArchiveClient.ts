@@ -7,6 +7,7 @@ interface VisitorChallengeDto {
   durationDays: number;
   stakeName: string;
   createdAt: string;
+  isMine: boolean;
 }
 
 interface VisitorMessageDto {
@@ -88,6 +89,8 @@ function toChallenge(item: VisitorChallengeDto): Challenge {
     entrantCount: 0,
     watchers: 0,
     interestingScore: 0,
+    archiveEntry: true,
+    ownedByCurrentVisitor: item.isMine,
   };
 }
 

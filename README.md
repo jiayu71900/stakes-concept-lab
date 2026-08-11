@@ -32,7 +32,7 @@ current day, and choose an outcome when the deadline arrives.
 
 The five core surfaces are:
 
-- **Discover** — seven random pulls; ordinary bets cannot be searched.
+- **Discover** — seven random, non-sequential pulls; ordinary bets cannot be searched.
 - **Bet Detail** — physical stake, deadline, and immutable proof contract.
 - **Match / Challenge Room** — one challenger is selected, then the visitor controls a variable-length clock and daily maker log.
 - **Outcome** — failure opens a direct-shipping window.
@@ -41,16 +41,19 @@ The five core surfaces are:
 Visitors can also choose to let a challenge travel beyond their session. With
 explicit opt-in, its promise, duration, stake label, and room updates enter an
 anonymous visitor archive and may appear in future visitors’ random Discover
-pulls. Declining keeps the challenge in the current browser session only. The
-archive does not collect real names, contact details, addresses, payment, or
-shipping information.
+pulls immediately. A visitor may rediscover their own archived bet and read its
+room history, but cannot challenge it. Declining keeps the challenge in the
+current browser session only. The archive does not collect real names, contact
+details, addresses, payment, or shipping information.
 
 A visitor chooses one display name the first time they publish or challenge.
 That name remains attached to every later action. After an outcome, publishing
 and challenging continue under that visitor's own name, with actions labelled
 as a marked or unmarked user. A default carries its unresolved marks forward;
 paying up leaves the visitor unmarked. The interface never asks the visitor to
-roleplay another creator, choose a second identity, or rename themselves.
+roleplay another creator, choose a second identity, or rename themselves. If a
+marked visitor later receives a default as the selected challenger, one
+unresolved mark is removed and the updated count continues with that identity.
 
 The separate **Build With Us Lab** turns unresolved system questions into
 contribution paths. It is the collaborator funnel, not a fictional team page.

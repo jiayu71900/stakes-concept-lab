@@ -34,7 +34,7 @@ One of `highest_stakes`, `most_watched`, or `most_interesting`. All boards share
 
 ### Discovery
 
-A session-level record of seen challenges and remaining pulls. Ordinary discovery filters open, non-owned, unseen challenges and returns one at random. Search is intentionally absent.
+A session-level record of seen challenges and remaining pulls. Ordinary discovery filters open, unseen challenges and returns one at random. An anonymously owned visitor challenge may surface, but it is watch-only for that visitor. Search is intentionally absent.
 
 ### Challenge Message
 

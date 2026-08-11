@@ -100,6 +100,8 @@ export interface Challenge {
   interestingScore: number;
   leaderboardPlacement?: LeaderboardPlacement;
   match?: Match;
+  archiveEntry?: boolean;
+  ownedByCurrentVisitor?: boolean;
 }
 
 export interface DiscoverySession {

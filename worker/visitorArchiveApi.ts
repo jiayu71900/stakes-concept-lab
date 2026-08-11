@@ -95,6 +95,7 @@ export async function handleVisitorArchiveRequest(request: Request, db?: D1Datab
         durationDays: challenge.duration_days,
         stakeName: challenge.stake_name,
         createdAt: challenge.created_at,
+        isMine: currentOwner === challenge.owner_hash,
       })),
       messages: archive.messages.map((message) => ({
         id: message.id,
@@ -146,7 +147,7 @@ export async function handleVisitorArchiveRequest(request: Request, db?: D1Datab
       status: "visible",
     } : undefined;
     await insertVisitorChallenge(db, challenge, firstMessage);
-    return json({ challenge: { id, creatorAlias: challenge.creator_alias, title: challenge.title, durationDays: challenge.duration_days, stakeName: challenge.stake_name, createdAt }, message: firstMessage ? { id: firstMessage.id, challengeId: id, day: 1, body: firstMessage.body, createdAt } : null }, 201);
+    return json({ challenge: { id, creatorAlias: challenge.creator_alias, title: challenge.title, durationDays: challenge.duration_days, stakeName: challenge.stake_name, createdAt, isMine: true }, message: firstMessage ? { id: firstMessage.id, challengeId: id, day: 1, body: firstMessage.body, createdAt } : null }, 201);
   }
 
   if (url.pathname === "/api/visitor-messages" && request.method === "POST") {

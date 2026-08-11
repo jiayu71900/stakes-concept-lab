@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import type { Challenge, DemoState, LeaderboardType, User } from "@/domain/models";
 import { challenges, createInitialDemoState, creators } from "@/mock/demoData";
-import { deterministicDiscovery } from "@/engine/discoveryEngine";
+import { canChallenge, discoverNext } from "@/engine/discoveryEngine";
 import { advanceThrough, transitionChallenge } from "@/engine/challengeStateMachine";
 import { recordDefault } from "@/engine/defaultEngine";
 import { rankLeaderboard } from "@/engine/leaderboardEngine";
@@ -131,6 +131,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   const [visitorChallenges, setVisitorChallenges] = useState<Challenge[]>([]);
   const [visitorCreators, setVisitorCreators] = useState<User[]>([]);
   const [archiveSaved, setArchiveSaved] = useState(false);
+  const [seenDiscoveryIds, setSeenDiscoveryIds] = useState<string[]>([]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -224,14 +225,32 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
   };
 
   const refreshDiscovery = () => {
-    setState((current) => {
-      const next = deterministicDiscovery(availableChallenges, current.discoveryIndex, current.viewer.refreshesRemaining);
-      return {
-        ...current,
-        discoveryIndex: next.index,
-        viewer: { ...current.viewer, refreshesRemaining: next.refreshesRemaining },
-      };
-    });
+    if (state.viewer.refreshesRemaining <= 0) return;
+    const currentSeen = [...new Set([...seenDiscoveryIds, currentDiscovery.id])];
+    let next = discoverNext(
+      availableChallenges,
+      state.viewer,
+      { seenChallengeIds: currentSeen, refreshesRemaining: state.viewer.refreshesRemaining },
+      Math.random,
+      { includeOwn: true },
+    );
+    if (!next.challenge) {
+      next = discoverNext(
+        availableChallenges,
+        state.viewer,
+        { seenChallengeIds: [currentDiscovery.id], refreshesRemaining: state.viewer.refreshesRemaining },
+        Math.random,
+        { includeOwn: true },
+      );
+    }
+    if (!next.challenge) return;
+    const nextIndex = availableChallenges.findIndex((challenge) => challenge.id === next.challenge?.id);
+    setSeenDiscoveryIds(next.session.seenChallengeIds);
+    setState((current) => ({
+      ...current,
+      discoveryIndex: nextIndex,
+      viewer: { ...current.viewer, refreshesRemaining: next.session.refreshesRemaining },
+    }));
   };
 
   const createChallenge = async (durationDays: number, title: string, stakeName: string, firstMessage: string, shareWithFutureVisitors: boolean) => {
@@ -256,6 +275,7 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
       },
       entrantCount: 0,
       watchers: 0,
+      ownedByCurrentVisitor: true,
     };
     let opened = transitionChallenge(localDraft, "OPEN");
     let publishedCreator = identity;
@@ -459,11 +479,16 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     const reset = createInitialDemoState();
     setState(visitorIdentity ? { ...reset, viewer: { ...visitorIdentity, refreshesRemaining: reset.viewer.refreshesRemaining } } : reset);
     setCreateIdentity(null);
+    setSeenDiscoveryIds([]);
     setShowCreatedToast(false);
     navigate("discover");
   };
 
   const challengeAsProfile = (identity: User) => {
+    if (identity.id.startsWith("visitor-player-")) {
+      window.localStorage.setItem(VISITOR_IDENTITY_KEY, JSON.stringify(identity));
+      setVisitorIdentity(identity);
+    }
     setState((current) => {
       const base = createInitialDemoState();
       const nextIndex = availableChallenges.findIndex((challenge) => challenge.creatorId !== identity.id);
@@ -525,6 +550,15 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
     defaultsReceived: profileStatusIdentity.defaultsReceived,
   } : profileStatusIdentity;
 
+  const publishAsProfile = (identity: User) => {
+    if (identity.id.startsWith("visitor-player-")) {
+      window.localStorage.setItem(VISITOR_IDENTITY_KEY, JSON.stringify(identity));
+      setVisitorIdentity(identity);
+    }
+    setCreateIdentity(identity);
+    setCreateOpen(true);
+  };
+
   const copyBrief = async (title: string, brief: string) => {
     await navigator.clipboard.writeText(`BET I DO. contribution brief — ${title}\n\n${brief}`);
     setCopiedBrief(title);
@@ -553,14 +587,14 @@ export function DemoApp({ initialView }: { initialView: DemoView }) {
       )}
 
       {view === "discover" && (
-        <DiscoverPage challenge={currentDiscovery} refreshes={state.viewer.refreshesRemaining} leaderboards={leaderboards} onRefresh={refreshDiscovery} onOpen={openChallenge} />
+        <DiscoverPage challenge={currentDiscovery} creator={findCreator(currentDiscovery)} refreshes={state.viewer.refreshesRemaining} leaderboards={leaderboards} onRefresh={refreshDiscovery} onOpen={openChallenge} />
       )}
       {view === "challenge" && (
-        publisherMode ? <PublisherChallengePage challenge={state.featured} creator={state.creator} onViewPublic={() => setPublisherMode(false)} /> : <ChallengePage challenge={state.featured} creatorName={state.creator.displayName} joined={state.joined} canJoin={state.viewer.id !== state.creator.id} onJoin={() => requestVisitorIdentity("join")} onSelect={simulateSelection} />
+        publisherMode ? <PublisherChallengePage challenge={state.featured} creator={state.creator} archiveSaved={archiveSaved} onViewPublic={() => setPublisherMode(false)} onDiscover={() => navigate("discover")} /> : <ChallengePage challenge={state.featured} creatorName={state.creator.displayName} joined={state.joined} canJoin={canChallenge(state.featured, state.viewer)} messages={state.messages} onJoin={() => requestVisitorIdentity("join")} onSelect={simulateSelection} />
       )}
       {view === "match" && <MatchPage state={state} onStart={startChallenge} onAdvance={advanceDays} onResolve={resolveChallenge} onPostMessage={postDailyMessage} onPostChallengerNote={postChallengerNote} />}
       {view === "outcome" && <OutcomePage state={state} onDefault={simulateDefault} onShip={simulateShipment} onProfile={openProfile} />}
-      {view === "profile" && <ProfilePage state={state} user={profileIdentity} statusIdentityId={profileStatusIdentity.id} onPublishAs={(identity) => { setCreateIdentity(identity); setCreateOpen(true); }} onChallengeAs={challengeAsProfile} />}
+      {view === "profile" && <ProfilePage state={state} user={profileIdentity} statusIdentityId={profileStatusIdentity.id} onPublishAs={publishAsProfile} onChallengeAs={challengeAsProfile} />}
       {view === "lab" && <LabPage copiedBrief={copiedBrief} onCopy={copyBrief} />}
 
       <footer className="footer">
@@ -583,15 +617,16 @@ function StakeObject({ challenge, compact = false }: { challenge: Challenge; com
   );
 }
 
-function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen }: {
+function DiscoverPage({ challenge, creator, refreshes, leaderboards, onRefresh, onOpen }: {
   challenge: Challenge;
+  creator: User;
   refreshes: number;
   leaderboards: { board: LeaderboardType; entries: ReturnType<typeof rankLeaderboard> }[];
   onRefresh: () => void;
   onOpen: (challenge: Challenge) => void;
 }) {
-  const creator = creatorFor(challenge);
   const highStakes = challenge.leaderboardPlacement?.board === "highest_stakes";
+  const ownBet = challenge.ownedByCurrentVisitor === true;
   const [boardsOpen, setBoardsOpen] = useState(false);
   return (
     <div className="page-wrap discover-page">
@@ -604,7 +639,7 @@ function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen }:
         <article className="challenge-card">
           <div className="card-topline">
             <div className="stack-label"><span>RANDOM BET</span><b>{8 - refreshes} / 7</b></div>
-            <div className="creator-chip"><span>{creator.avatar}</span>{creator.handle}</div>
+            <div className="creator-chip"><span>{creator.avatar}</span><div>{ownBet ? "YOUR BET" : creator.handle}{challenge.archiveEntry && <small>VISITOR ARCHIVE</small>}</div></div>
             <div className="timer"><i /> {challenge.daysRemaining} days left</div>
           </div>
           <div className="bet-card-main">
@@ -621,7 +656,7 @@ function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen }:
               <div className="card-social-proof"><span><strong>{challenge.entrantCount}</strong> challengers</span><span><strong>{challenge.watchers}</strong> watching</span></div>
             </div>
           </div>
-          <div className="card-footer"><div className="card-actions"><button className="primary-action" onClick={() => onOpen(challenge)}>Bet {creator.displayName} won’t <span>↗</span></button><button className="shuffle-button" onClick={onRefresh} disabled={refreshes === 0} aria-label="Show another random bet"><span>↻</span> Pass</button></div><span className="refresh-count"><strong>{refreshes}</strong> pulls left today</span></div>
+          <div className="card-footer"><div className="card-actions"><button className="primary-action" onClick={() => onOpen(challenge)}>{ownBet ? "Open your bet" : `Bet ${creator.displayName} won’t`} <span>↗</span></button><button className="shuffle-button" onClick={onRefresh} disabled={refreshes === 0} aria-label="Show another random bet"><span>↻</span> Pass</button></div><span className="refresh-count"><strong>{refreshes}</strong> pulls left today</span></div>
         </article>
         <aside className="rule-note">
           <span className="note-number">RULE 01</span><h3>You can’t search for an ordinary bet.</h3><p>Discovery stays a little strange on purpose: limited random pulls create attention without turning people’s promises into inventory.</p><div className="scribble">luck &gt; filters</div>
@@ -649,7 +684,7 @@ function DiscoverPage({ challenge, refreshes, leaderboards, onRefresh, onOpen }:
   );
 }
 
-function PublisherChallengePage({ challenge, creator, onViewPublic }: { challenge: Challenge; creator: User; onViewPublic: () => void }) {
+function PublisherChallengePage({ challenge, creator, archiveSaved, onViewPublic, onDiscover }: { challenge: Challenge; creator: User; archiveSaved: boolean; onViewPublic: () => void; onDiscover: () => void }) {
   const marked = creator.unresolvedDefaults > 0;
   return (
     <div className="page-wrap publisher-page">
@@ -660,13 +695,16 @@ function PublisherChallengePage({ challenge, creator, onViewPublic }: { challeng
         <div className="publisher-meta"><span><b>{challenge.durationDays}</b> DAYS</span><span><b>{challenge.entrantCount}</b> ENTRANTS</span><span><b>{challenge.watchers}</b> WATCHING</span></div>
         <StakeObject challenge={challenge} />
         {marked && <div className="marked-publisher"><span>{creator.unresolvedDefaults}</span><div><strong>PUBLIC MARK ATTACHED</strong><p>The bet is live. What happens to its reach is left for the system to reveal.</p></div></div>}
-        <div className="publisher-next"><div><small>NEXT</small><strong>Updates open after a challenger is drawn.</strong><p>The maker may post at most one note per day. Silence is allowed.</p></div><button className="giant-action" onClick={onViewPublic}>VIEW PUBLIC BET <span>→</span></button></div>
+        <div className="publisher-next"><div><small>{archiveSaved ? "LIVE IN RANDOM DISCOVER NOW" : "THIS SESSION ONLY"}</small><strong>{archiveSaved ? "Your bet has joined the random pool." : "This bet was not added to the visitor archive."}</strong><p>{archiveSaved ? "It may appear on any visitor’s next pull—including yours. You can inspect its messages, but you cannot challenge yourself." : "Updates open after a challenger is drawn. The maker may post at most one note per day."}</p></div><div className="publisher-actions"><button className="giant-action" onClick={onViewPublic}>VIEW PUBLIC BET <span>→</span></button>{archiveSaved && <button className="giant-action secondary-publisher-action" onClick={onDiscover}>TRY RANDOM DISCOVER <span>↻</span></button>}</div></div>
       </section>
     </div>
   );
 }
 
-function ChallengePage({ challenge, creatorName, joined, canJoin, onJoin, onSelect }: { challenge: Challenge; creatorName: string; joined: boolean; canJoin: boolean; onJoin: () => void; onSelect: () => void }) {
+function ChallengePage({ challenge, creatorName, joined, canJoin, messages, onJoin, onSelect }: { challenge: Challenge; creatorName: string; joined: boolean; canJoin: boolean; messages: DemoState["messages"]; onJoin: () => void; onSelect: () => void }) {
+  const roomMessages = messages
+    .filter((message) => message.challengeId === challenge.id)
+    .toSorted((a, b) => a.day - b.day);
   return (
     <div className="page-wrap detail-page">
       <div className="detail-head"><p className="eyebrow">THE BET · ENTRY OPEN</p><h1>{creatorName} put<br />something real on it.</h1></div>
@@ -680,11 +718,19 @@ function ChallengePage({ challenge, creatorName, joined, canJoin, onJoin, onSele
         <section className="entry-panel">
           <StakeObject challenge={challenge} /><blockquote>“{challenge.stake.significance}”</blockquote><div className="verified-line"><span>✓</span> Ownership mocked as verified</div>
           <div className="room-preview"><b>INSIDE THE ROOM</b><p>The clock can move one day or one week at a time. The maker may leave at most one update per day.</p></div>
+          <div className="public-room-history">
+            <div><b>{challenge.ownedByCurrentVisitor ? "YOUR BET · WATCH-ONLY" : "ROOM HISTORY"}</b><span>{roomMessages.length} MESSAGE{roomMessages.length === 1 ? "" : "S"}</span></div>
+            {roomMessages.length === 0 ? <p>No messages have been left in this room yet.</p> : roomMessages.map((message) => {
+              const challengerMessage = message.kind === "CHALLENGER_NOTE";
+              const authorName = challengerMessage ? message.authorName ?? "Past challenger" : creatorName;
+              return <article key={message.id} className={challengerMessage ? "challenger-history-note" : "maker-history-note"}><small>{challengerMessage ? "CHALLENGER" : "MAKER"} · DAY {message.day}</small><strong>{authorName}</strong><p>{message.body}</p></article>;
+            })}
+          </div>
           <div className="entry-how"><b>BET THEY WON’T</b><span>Enter before the window closes. One challenger is drawn from everyone inside.</span></div>
           {!joined ? <button className="giant-action" disabled={!canJoin} onClick={onJoin}>{canJoin ? "TAKE THE OTHER SIDE" : "YOU MADE THIS BET"} <span>{canJoin ? "→" : "·"}</span></button> : (
             <div className="joined-panel"><span className="joined-check">✓</span><h3>You’re in.</h3><p>{challenge.entrantCount} people entered. One challenger will be selected when the window closes.</p><button className="giant-action" onClick={onSelect}>CLOSE ENTRY &amp; DRAW <span>→</span></button></div>
           )}
-          {!canJoin && !joined && <p className="fine-print self-entry-note">One identity cannot make and challenge the same bet. Pull another bet from Discover.</p>}
+          {!canJoin && !joined && <p className="fine-print self-entry-note">This is your bet. You can read its room history, but one identity cannot make and challenge the same bet.</p>}
           <p className="fine-print">No money changes hands. What the system does at the deadline is revealed only after the match begins.</p>
         </section>
       </div>
@@ -812,6 +858,8 @@ function OutcomePage({ state, onDefault, onShip, onProfile }: { state: DemoState
   const defaulted = state.featured.state === "DEFAULTED";
   const marks = state.featured.leaderboardPlacement?.board === "highest_stakes" ? 10 : 1;
   const settlement = state.lastDefaultSettlement;
+  const cleanedVisitorMark = (settlement?.cleanedMarks ?? 0) > 0;
+  const markedVisitorAfterShipment = state.viewer.unresolvedDefaults > 0;
   return (
     <div className="page-wrap outcome-page">
       <div className="outcome-title"><p className="eyebrow">LOST THE BET</p><span className="failed-word">FAILED</span><h1>{state.creator.displayName} missed the deadline.</h1></div>
@@ -821,17 +869,17 @@ function OutcomePage({ state, onDefault, onShip, onProfile }: { state: DemoState
         <div className="resolution-card is-default">
           <span className="resolution-kicker">UNPAID BET +{settlement?.debtorMarksAdded ?? marks}</span>
           <h2>One default. Two different consequences.</h2>
-          <p>{state.creator.displayName} receives the new mark. Continue the story under your own name with that marked state.</p>
+          <p>{cleanedVisitorMark ? `${state.viewer.displayName} was already marked. Receiving this default cleans one unresolved mark.` : `${state.creator.displayName} receives the new mark. Continue the story under your own name with that marked state.`}</p>
           <div className="settlement-ledger">
             <div><small>MAKER · DEFAULTED</small><strong>{state.creator.displayName}</strong><span>+{settlement?.debtorMarksAdded ?? marks} unresolved</span></div>
             <div className={settlement?.cleanedMarks ? "is-cleaned" : ""}><small>SELECTED CHALLENGER · RECEIVED DEFAULT</small><strong>{state.viewer.displayName}</strong><span>{settlement?.creditorMarksBefore ?? state.viewer.unresolvedDefaults} → {settlement?.creditorMarksAfter ?? state.viewer.unresolvedDefaults} unresolved</span></div>
           </div>
           <div className="resolution-profile-actions">
-            <button className="dark-action" onClick={() => onProfile(state.creator.id)}>CONTINUE AS A MARKED USER <span>→</span></button>
+            <button className="dark-action" onClick={() => onProfile(cleanedVisitorMark ? state.viewer.id : state.creator.id)}>{cleanedVisitorMark ? "CONTINUE · 1 MARK CLEANED" : "CONTINUE AS A MARKED USER"} <span>→</span></button>
           </div>
         </div>
       ) : (
-        <div className="resolution-card is-shipped"><span className="resolution-kicker">PAID UP · TRACKING ADDED</span><h2>The stake is moving.</h2><p>The {state.featured.stake.itemName} is on its way to {state.viewer.displayName}. No default was recorded. Continue under your own name without a mark.</p><button className="dark-action" onClick={() => onProfile(state.creator.id)}>CONTINUE AS AN UNMARKED USER <span>→</span></button></div>
+        <div className="resolution-card is-shipped"><span className="resolution-kicker">PAID UP · TRACKING ADDED</span><h2>The stake is moving.</h2><p>The {state.featured.stake.itemName} is on its way to {state.viewer.displayName}. No default was recorded, so the challenger’s existing mark count does not change.</p><button className="dark-action" onClick={() => onProfile(state.viewer.id)}>CONTINUE AS {markedVisitorAfterShipment ? "A MARKED USER" : "AN UNMARKED USER"} <span>→</span></button></div>
       )}
       <aside className="rule-strip"><b>RULE 04</b> Default is a visible consequence, not a ban.</aside>
     </div>

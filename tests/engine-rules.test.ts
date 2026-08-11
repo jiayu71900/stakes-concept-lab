@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { D1Database, D1PreparedStatement } from "../db/visitorArchive.js";
 import type { Challenge, User } from "../domain/models.js";
 import { advanceThrough, transitionChallenge } from "../engine/challengeStateMachine.js";
 import { cleanseOneDefault, defaultMarksFor, recordDefault } from "../engine/defaultEngine.js";
-import { discoverNext } from "../engine/discoveryEngine.js";
+import { canChallenge, discoverNext } from "../engine/discoveryEngine.js";
 import { rankLeaderboard } from "../engine/leaderboardEngine.js";
 import { challengeMessages, challenges } from "../mock/demoData.js";
-import { normalizeChallengeInput, normalizeChallengerNoteInput, normalizeMessageInput } from "../worker/visitorArchiveApi.js";
+import { handleVisitorArchiveRequest, normalizeChallengeInput, normalizeChallengerNoteInput, normalizeMessageInput } from "../worker/visitorArchiveApi.js";
 
 function user(id: string, unresolvedDefaults = 0): User {
   return {
@@ -156,6 +157,28 @@ test("visitor archive requires consent, accepts bounded content, and rejects lin
   assert.equal(normalizeChallengerNoteInput({ challengeId: "steam-deck", authorName: "Lena", day: 61, body: "Too late" }), null);
 });
 
+test("visitor archive identifies an owned challenge without exposing its owner hash", async () => {
+  const session = "visitor-session-for-owned-challenge";
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(session));
+  const ownerHash = [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
+  const prepare = (query: string): D1PreparedStatement => ({
+    bind() { return this; },
+    async run() { return { success: true }; },
+    async all<T>() {
+      if (query.includes("FROM visitor_challenges")) return { results: [{ id: "visitor-owned", owner_hash: ownerHash, creator_alias: "River", title: "Ship a build", duration_days: 14, stake_name: "Camera", created_at: "2026-08-11T00:00:00.000Z" } as T] };
+      return { results: [] };
+    },
+    async first() { return null; },
+  });
+  const db: D1Database = { prepare, async batch() { return []; } };
+
+  const response = await handleVisitorArchiveRequest(new Request("https://example.test/api/visitor-challenges", { headers: { "x-visitor-session": session } }), db);
+  const body = await response.json() as { challenges: Array<{ isMine: boolean }>; [key: string]: unknown };
+
+  assert.equal(body.challenges[0]?.isMine, true);
+  assert.equal(JSON.stringify(body).includes(ownerHash), false);
+});
+
 test("historical challenger messages are named, dated, and limited to one per challenger fixture", () => {
   const challengerNotes = challengeMessages.filter((message) => message.kind === "CHALLENGER_NOTE");
   assert.ok(challengerNotes.length >= 3);
@@ -205,4 +228,22 @@ test("random discovery excludes the viewer, closed pacts, and already-seen pacts
   );
   assert.equal(exhausted.challenge, null);
   assert.equal(exhausted.session.refreshesRemaining, 0);
+});
+
+test("random discovery can surface an owned visitor bet without allowing self-challenge", () => {
+  const viewer = user("viewer");
+  const own = { ...challenge("own", "archive-creator", 200), ownedByCurrentVisitor: true };
+  const other = challenge("other", "other-maker", 100);
+
+  const result = discoverNext(
+    [own, other],
+    viewer,
+    { seenChallengeIds: [], refreshesRemaining: 2 },
+    () => 0,
+    { includeOwn: true },
+  );
+
+  assert.equal(result.challenge?.id, own.id);
+  assert.equal(canChallenge(own, viewer), false);
+  assert.equal(canChallenge(other, viewer), true);
 });
